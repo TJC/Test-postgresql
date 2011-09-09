@@ -8,9 +8,10 @@ use Class::Accessor::Lite;
 use Cwd;
 use DBI;
 use File::Temp qw(tempdir);
-use POSIX qw(SIGTERM WNOHANG setuid);
+use Time::HiRes qw(nanosleep);
+use POSIX qw(SIGTERM SIGKILL WNOHANG setuid);
 
-our $VERSION = '0.09';
+our $VERSION = '0.10';
 
 our @SEARCH_PATHS = (
     # popular installtion dir?
@@ -85,6 +86,7 @@ sub DESTROY {
     my $self = shift;
     $self->stop
         if defined $self->pid && $$ == $self->_owner_pid;
+    return;
 }
 
 sub dsn {
@@ -181,13 +183,30 @@ sub _try_start {
 
 sub stop {
     my ($self, $sig) = @_;
-    return
-        unless defined $self->pid;
+    return unless defined $self->pid;
+
     $sig ||= SIGTERM;
+
     kill $sig, $self->pid;
-    while (waitpid($self->pid, 0) <= 0) {
+    my $timeout = 10 * 1000000000;
+    while ($timeout > 0 and waitpid($self->pid, WNOHANG) <= 0) {
+        $timeout -= nanosleep(500000000);
     }
+
+    if ($timeout <= 0) {
+        warn "Pg refused to die gracefully; killing it violently.\n";
+        kill SIGKILL, $self->pid;
+        $timeout = 5 * 1000000000;
+        while ($timeout > 0 and waitpid($self->pid, WNOHANG) <= 0) {
+            $timeout -= nanosleep(500000000);
+        }
+        if ($timeout <= 0) {
+            warn "Pg really didn't die.. WTF?\n";
+        }
+    }
+
     $self->pid(undef);
+    return;
 }
 
 sub setup {

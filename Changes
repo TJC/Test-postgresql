@@ -1,5 +1,8 @@
 Revision history for Perl extension Test::postgresql.
 
+0.10  xxxxxxxxxxxxxxxxxxxxxxx
+    - Avoid deadlocks during Postgres shutdown.
+
 0.09  Fri Oct 23 16:50:00 2009
 	- change cwd and directory permissions, modes for better testing
 
