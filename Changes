@@ -1,0 +1,32 @@
+Revision history for Perl extension Test::postgresql.
+
+0.09  Fri Oct 23 16:50:00 2009
+	- change cwd and directory permissions, modes for better testing
+
+0.08  Fri Oct 16 13:25:00 2009
+      - do not destroy postmaster when child process exits
+
+0.07  Thu Oct 15 14:14:00 2009
+	- fix degradation in 0.04 (tests failed when running as root)
+
+0.06  Thu Oct 15 09:40:00 2009
+	- dsn() defaults to an empty "test" database for better interoperability with Test::mysqld
+
+0.05  Thu Oct 15 08:10:00 2009
+	- add macport installation target dir to default search paths
+	- adjust pod synopsis to follow the changes in 0.04
+
+0.04  Thu Oct 15 08:00:00 2009
+	- add dsn generator
+	- use "postmaster_args" on pastmaster start (thanks to HSW)
+	- create temporary files within base_dir (ubuntu / debian compatibility)
+	- add .deb package installation target dir to default search paths
+
+0.03  Thu Aug 20 21:00:00 2009
+	- preserve port number on restart
+
+0.02  Wed Aug 19 19:30:00 2009
+	- use given port number if given
+
+0.01  Mon Aug 17 21:15:00 2009
+	- initial release
