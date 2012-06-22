@@ -3,15 +3,15 @@ use warnings;
 
 use DBI;
 use Test::More;
-use Test::postgresql;
+use Test::PostgreSQL;
 
-Test::postgresql->new()
-    or plan skip_all => $Test::postgresql::errstr;
+Test::PostgreSQL->new()
+    or plan skip_all => $Test::PostgreSQL::errstr;
 
 plan tests => 3;
 
 my @pgsql = map {
-    my $pgsql = Test::postgresql->new();
+    my $pgsql = Test::PostgreSQL->new();
     ok($pgsql);
     $pgsql;
 } 0..1;

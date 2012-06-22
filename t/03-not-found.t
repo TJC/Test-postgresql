@@ -2,13 +2,13 @@ use strict;
 use warnings;
 
 use DBI;
-use Test::postgresql;
+use Test::PostgreSQL;
 
 use Test::More tests => 3;
 
 $ENV{PATH} = '/nonexistent';
-@Test::postgresql::SEARCH_PATHS = ();
+@Test::PostgreSQL::SEARCH_PATHS = ();
 
-ok(! defined $Test::postgresql::errstr);
-ok(! defined Test::postgresql->new());
-ok($Test::postgresql::errstr);
+ok(! defined $Test::PostgreSQL::errstr);
+ok(! defined Test::PostgreSQL->new());
+ok($Test::PostgreSQL::errstr);

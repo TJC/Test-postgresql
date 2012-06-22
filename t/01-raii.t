@@ -3,10 +3,10 @@ use warnings;
 
 use DBI;
 use Test::More;
-use Test::postgresql;
+use Test::PostgreSQL;
 
-my $pgsql = Test::postgresql->new()
-    or plan skip_all => $Test::postgresql::errstr;
+my $pgsql = Test::PostgreSQL->new()
+    or plan skip_all => $Test::PostgreSQL::errstr;
 
 plan tests => 3;
 
@@ -19,11 +19,11 @@ is(
 );
 
 my $dbh = DBI->connect($dsn);
-ok($dbh, 'connect to postgresql');
+ok($dbh, 'connect to PostgreSQL');
 undef $dbh;
 
 undef $pgsql;
 ok(
     ! DBI->connect($dsn),
-    "shutdown postgresql",
+    "shutdown PostgreSQL",
 );
