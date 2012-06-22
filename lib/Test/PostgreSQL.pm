@@ -312,29 +312,41 @@ Test::PostgreSQL - PostgreSQL runner for tests
 
 =head1 DESCRIPTION
 
-C<Test::PostgreSQL> automatically setups a PostgreSQL instance in a temporary directory, and destroys it when the perl script exits.
+C<Test::PostgreSQL> automatically setups a PostgreSQL instance in a temporary
+directory, and destroys it when the perl script exits.
+
+This module is a fork of Test::postgresql, which was abandoned by its author
+several years ago.
 
 =head1 FUNCTIONS
 
 =head2 new
 
-Create and run a PostgreSQL instance.  The instance is terminated when the returned object is being DESTROYed.  If required programs (initdb and postmaster) were not found, the function returns undef and sets appropriate message to $Test::PostgreSQL::errstr.
+Create and run a PostgreSQL instance.  The instance is terminated when the
+returned object is being DESTROYed.  If required programs (initdb and
+postmaster) were not found, the function returns undef and sets appropriate
+message to $Test::PostgreSQL::errstr.
 
 =head2 base_dir
 
-Returns directory under which the PostgreSQL instance is being created.  The property can be set as a parameter of the C<new> function, in which case the directory will not be removed at exit.
+Returns directory under which the PostgreSQL instance is being created.  The
+property can be set as a parameter of the C<new> function, in which case the
+directory will not be removed at exit.
 
 =head2 initdb
 
 =head2 postmaster
 
-Path to C<initdb> and C<postmaster> which are part of the PostgreSQL distribution.  If not set, the programs are automatically searched by looking up $PATH and other prefixed directories.
+Path to C<initdb> and C<postmaster> which are part of the PostgreSQL
+distribution.  If not set, the programs are automatically searched by looking
+up $PATH and other prefixed directories.
 
 =head2 initdb_args
 
 =head2 postmaster_args
 
-Arguments passed to C<initdb> and C<postmaster>.  Following example adds --encoding=utf8 option to C<initdb_args>.
+Arguments passed to C<initdb> and C<postmaster>.  Following example adds
+--encoding=utf8 option to C<initdb_args>.
 
   my $pgsql = Test::PostgreSQL->new(
       initdb_args
@@ -343,7 +355,8 @@ Arguments passed to C<initdb> and C<postmaster>.  Following example adds --encod
 
 =head2 dsn
 
-Builds and returns dsn by using given parameters (if any).  Default username is 'postgres', and dbname is 'test' (an empty database).
+Builds and returns dsn by using given parameters (if any).  Default username is
+'postgres', and dbname is 'test' (an empty database).
 
 =head2 pid
 
@@ -351,7 +364,8 @@ Returns process id of PostgreSQL (or undef if not running).
 
 =head2 port
 
-Returns TCP port number on which postmaster is accepting connections (or undef if not running).
+Returns TCP port number on which postmaster is accepting connections (or undef
+if not running).
 
 =head2 start
 
@@ -367,15 +381,17 @@ Setups the PostgreSQL instance.
 
 =head1 AUTHOR
 
+Toby Corkindale
+
+=head1 PREVIOUS AUTHOR
+
 Kazuho Oku
-
-=head1 THANKS TO
-
-HSW
 
 =head1 COPYRIGHT
 
-Copyright (C) 2009 Cybozu Labs, Inc.
+Version 0.10 copyright © 2012 Toby Corkindale.
+
+Previous versions copyright (C) 2009 Cybozu Labs, Inc.
 
 =head1 LICENSE
 
