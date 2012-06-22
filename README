@@ -1,5 +1,5 @@
 Test::PostgreSQL
-===========================
+================
 
 Test::PostgreSQL helps you run unit tests that require a PostgreSQL database,
 by starting one up for you, and automatically destroying it later.
