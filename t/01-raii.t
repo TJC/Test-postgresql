@@ -19,7 +19,7 @@ is(
 );
 
 my $dbh = DBI->connect($dsn);
-ok($dbh, 'connect to PostgreSQL');
+ok($dbh->ping, 'connected to PostgreSQL');
 undef $dbh;
 
 undef $pgsql;
