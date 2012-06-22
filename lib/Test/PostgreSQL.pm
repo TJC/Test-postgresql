@@ -1,4 +1,4 @@
-package Test::postgresql;
+package Test::PostgreSQL;
 
 use strict;
 use warnings;
@@ -116,7 +116,7 @@ sub start {
             }
         }
         # failed
-        die "failed to launch postgresql:$!\n$err";
+        die "failed to launch PostgreSQL:$!\n$err";
     }->();
     { # create "test" database
         my $dbh = DBI->connect($self->dsn(dbname => 'template1'), '', '', {})
@@ -175,7 +175,7 @@ sub _try_start {
         }
         sleep 1;
     }
-    # postgresql is ready
+    # PostgreSQL is ready
     $self->pid($pid);
     $self->port($port);
     return;
@@ -295,16 +295,16 @@ __END__
 
 =head1 NAME
 
-Test::postgresql - postgresql runner for tests
+Test::PostgreSQL - PostgreSQL runner for tests
 
 =head1 SYNOPSIS
 
   use DBI;
-  use Test::postgresql;
+  use Test::PostgreSQL;
   use Test::More;
   
-  my $pgsql = Test::postgresql->new()
-      or plan skip_all => $Test::postgresql::errstr;
+  my $pgsql = Test::PostgreSQL->new()
+      or plan skip_all => $Test::PostgreSQL::errstr;
   
   plan tests => XXX;
   
@@ -312,23 +312,23 @@ Test::postgresql - postgresql runner for tests
 
 =head1 DESCRIPTION
 
-C<Test::postgresql> automatically setups a postgresql instance in a temporary directory, and destroys it when the perl script exits.
+C<Test::PostgreSQL> automatically setups a PostgreSQL instance in a temporary directory, and destroys it when the perl script exits.
 
 =head1 FUNCTIONS
 
 =head2 new
 
-Create and run a postgresql instance.  The instance is terminated when the returned object is being DESTROYed.  If required programs (initdb and postmaster) were not found, the function returns undef and sets appropriate message to $Test::postgresql::errstr.
+Create and run a PostgreSQL instance.  The instance is terminated when the returned object is being DESTROYed.  If required programs (initdb and postmaster) were not found, the function returns undef and sets appropriate message to $Test::PostgreSQL::errstr.
 
 =head2 base_dir
 
-Returns directory under which the postgresql instance is being created.  The property can be set as a parameter of the C<new> function, in which case the directory will not be removed at exit.
+Returns directory under which the PostgreSQL instance is being created.  The property can be set as a parameter of the C<new> function, in which case the directory will not be removed at exit.
 
 =head2 initdb
 
 =head2 postmaster
 
-Path to C<initdb> and C<postmaster> which are part of the postgresql distribution.  If not set, the programs are automatically searched by looking up $PATH and other prefixed directories.
+Path to C<initdb> and C<postmaster> which are part of the PostgreSQL distribution.  If not set, the programs are automatically searched by looking up $PATH and other prefixed directories.
 
 =head2 initdb_args
 
@@ -336,10 +336,10 @@ Path to C<initdb> and C<postmaster> which are part of the postgresql distributio
 
 Arguments passed to C<initdb> and C<postmaster>.  Following example adds --encoding=utf8 option to C<initdb_args>.
 
-  my $pgsql = Test::postgresql->new(
+  my $pgsql = Test::PostgreSQL->new(
       initdb_args
-          => $Test::postgresql::Defaults{initdb_args} . ' --encoding=utf8'
-  ) or plan skip_all => $Test::postgresql::errstr;
+          => $Test::PostgreSQL::Defaults{initdb_args} . ' --encoding=utf8'
+  ) or plan skip_all => $Test::PostgreSQL::errstr;
 
 =head2 dsn
 
@@ -347,7 +347,7 @@ Builds and returns dsn by using given parameters (if any).  Default username is 
 
 =head2 pid
 
-Returns process id of postgresql (or undef if not running).
+Returns process id of PostgreSQL (or undef if not running).
 
 =head2 port
 
@@ -363,7 +363,7 @@ Stops postmaster.
 
 =head2 setup
 
-Setups the postgresql instance.
+Setups the PostgreSQL instance.
 
 =head1 AUTHOR
 

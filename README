@@ -1,7 +1,8 @@
-Test::postgresql
+Test::PostgreSQL
 ===========================
 
-Test::postgresql is postgresql runner for tests.
+Test::PostgreSQL helps you run unit tests that require a PostgreSQL database,
+by starting one up for you, and automatically destroying it later.
 
 INSTALLATION
 
@@ -12,13 +13,23 @@ To install this module type the following:
    make test
    make install
 
-DEPENDENCIES
+DEPENDENCIES:
 
-See Makefile.PL.
+ * Class::Accessor::Lite
+ * Time::HiRes (usually in Perl core)
+
+This module's own unit tests require:
+
+ * DBI
+ * DBD::Pg
+ * Test::SharedFork
 
 COPYRIGHT AND LICENSE
 
-Copyright (C) 2009 by Cybozu Labs, Inc.
+This version Copyright © 2011,2012 Toby Corkindale, all rights reserved.
+
+Version 0.09 and earlier were Copyright (C) 2009 by Cybozu Labs, Inc.
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.
+

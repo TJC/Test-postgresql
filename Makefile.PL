@@ -1,8 +1,8 @@
 use strict;
 use inc::Module::Install;
 
-name 'Test-postgresql';
-all_from 'lib/Test/postgresql.pm';
+name 'Test-PostgreSQL';
+all_from 'lib/Test/PostgreSQL.pm';
 
 requires 'Class::Accessor::Lite';
 requires 'Time::HiRes';

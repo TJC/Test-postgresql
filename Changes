@@ -1,6 +1,7 @@
-Revision history for Perl extension Test::postgresql.
+Revision history for Perl extension Test::PostgreSQL.
 
-0.10  xxxxxxxxxxxxxxxxxxxxxxx
+0.10  Fri Jun 22 15:30:00 2012
+    - Name change to Test::PostgreSQL
     - Avoid deadlocks during Postgres shutdown.
 
 0.09  Fri Oct 23 16:50:00 2009
