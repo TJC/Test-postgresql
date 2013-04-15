@@ -293,6 +293,10 @@ sub _get_path_of {
 1;
 __END__
 
+=pod
+
+=encoding utf8
+
 =head1 NAME
 
 Test::PostgreSQL - PostgreSQL runner for tests
