@@ -14,7 +14,7 @@ use POSIX qw(SIGTERM SIGKILL WNOHANG setuid);
 our $VERSION = '0.10';
 
 our @SEARCH_PATHS = (
-    # popular installtion dir?
+    # popular installation dir?
     qw(/usr/local/pgsql),
     # ubuntu (maybe debian as well, find the newest version)
     (sort { $b cmp $a } grep { -d $_ } glob "/usr/lib/postgresql/*"),
