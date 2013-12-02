@@ -10,4 +10,6 @@ test_requires 'DBI';
 test_requires 'DBD::Pg';
 test_requires 'Test::SharedFork' => 0.06;
 
+repository 'https://github.com/TJC/Test-postgresql';
+
 WriteAll;
