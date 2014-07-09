@@ -1,5 +1,12 @@
 Revision history for Perl extension Test::PostgreSQL.
 
+1.00  Wed Jul 09 11:30:00 2014
+    - Use pure default Postgresql config as some package managers
+      mess around with postgresql.conf too much.
+    - open log file in append mode to avoid different processes overwriting
+    - Add URI accessor to return postgresql::// connection string
+    - POD fixes
+
 0.10  Fri Jun 22 15:30:00 2012
     - Name change to Test::PostgreSQL
     - Avoid deadlocks during Postgres shutdown.
