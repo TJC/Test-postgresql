@@ -8,8 +8,6 @@ use Test::PostgreSQL;
 my $pgsql = Test::PostgreSQL->new()
     or plan skip_all => $Test::PostgreSQL::errstr;
 
-plan tests => 3;
-
 my $dsn = $pgsql->dsn;
 
 is(
@@ -22,8 +20,13 @@ my $dbh = DBI->connect($dsn);
 ok($dbh->ping, 'connected to PostgreSQL');
 undef $dbh;
 
+my $uri = $pgsql->uri;
+like($uri, qr/^postgresql:\/\/postgres\@127.0.0.1/);
+
 undef $pgsql;
 ok(
     ! DBI->connect($dsn),
-    "shutdown PostgreSQL",
+    "Removing variable causes shutdown of postgresql"
 );
+
+done_testing;

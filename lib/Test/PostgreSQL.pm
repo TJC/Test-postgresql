@@ -98,6 +98,11 @@ sub dsn {
     return 'DBI:Pg:' . join(';', map { "$_=$args{$_}" } sort keys %args);
 }
 
+sub uri {
+    my ($self, %args) = @_;
+    return sprintf('postgresql://postgres@127.0.0.1:%d/test', $self->port);
+}
+
 sub start {
     my $self = shift;
     return
