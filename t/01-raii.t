@@ -25,7 +25,7 @@ like($uri, qr/^postgresql:\/\/postgres\@127.0.0.1/);
 
 undef $pgsql;
 ok(
-    ! DBI->connect($dsn),
+    ! DBI->connect($dsn, undef, undef, { PrintError => 0 }),
     "Removing variable causes shutdown of postgresql"
 );
 
