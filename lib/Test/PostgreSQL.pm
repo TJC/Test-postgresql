@@ -11,7 +11,7 @@ use File::Temp qw(tempdir);
 use Time::HiRes qw(nanosleep);
 use POSIX qw(SIGTERM SIGKILL WNOHANG setuid);
 
-our $VERSION = '1.00';
+our $VERSION = '1.01';
 
 our @SEARCH_PATHS = (
     # popular installation dir?
