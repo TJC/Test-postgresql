@@ -28,4 +28,4 @@ requires:
 resources:
   license: http://dev.perl.org/licenses/
   repository: https://github.com/TJC/Test-postgresql
-version: '1.01'
+version: '1.02'

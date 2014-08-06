@@ -1,5 +1,8 @@
 Revision history for Perl extension Test::PostgreSQL.
 
+1.02  Wed Aug  6 13:49:25 2014
+    - Back out lower-case Test::postgresql as it caused too many problems with CPAN indexer
+
 1.01  Mon Aug  4 12:28:13 2014
     - Include lower-case Test::postgresql module as shim for users of that module to the new one
 
