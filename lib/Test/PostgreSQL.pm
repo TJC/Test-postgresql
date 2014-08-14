@@ -11,7 +11,7 @@ use File::Temp qw(tempdir);
 use Time::HiRes qw(nanosleep);
 use POSIX qw(SIGTERM SIGKILL WNOHANG setuid);
 
-our $VERSION = '1.02';
+our $VERSION = '1.03';
 
 # Various paths that Postgres gets installed under, sometimes with a version on the end,
 # in which case take the highest version. We append /bin/ and so forth to the path later.

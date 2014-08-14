@@ -1,5 +1,9 @@
 Revision history for Perl extension Test::PostgreSQL.
 
+1.03  Thu Aug 14 16:02:52 2014
+    - deadlock.t - Skip plan if we can't initialize postgresql
+    - Add extra paths to postgresql, for BSDs
+
 1.02  Wed Aug  6 13:49:25 2014
     - Back out lower-case Test::postgresql as it caused too many problems with CPAN indexer
 
