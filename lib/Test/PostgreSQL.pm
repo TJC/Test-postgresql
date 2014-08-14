@@ -13,6 +13,9 @@ use POSIX qw(SIGTERM SIGKILL WNOHANG setuid);
 
 our $VERSION = '1.02';
 
+# Various paths that Postgres gets installed under, sometimes with a version on the end,
+# in which case take the highest version. We append /bin/ and so forth to the path later.
+# Note that these are used only if the program isn't already in the path.
 our @SEARCH_PATHS = (
     # popular installation dir?
     qw(/usr/local/pgsql),
@@ -20,6 +23,10 @@ our @SEARCH_PATHS = (
     (sort { $b cmp $a } grep { -d $_ } glob "/usr/lib/postgresql/*"),
     # macport
     (sort { $b cmp $a } grep { -d $_ } glob "/opt/local/lib/postgresql-*"),
+    # Postgresapp.com
+    (sort { $b cmp $a } grep { -d $_ } glob "/Applications/Postgres.app/Contents/Versions/*"),
+    # BSDs end up with it in /usr/local/bin which doesn't appear to be in the path sometimes:
+    "/usr/local",
 );
 
 our $errstr;
