@@ -1,10 +1,12 @@
 #!perl
 use strict;
 use warnings;
+use DBI;
 use Test::PostgreSQL;
 use Test::More tests => 3;
 
-my $pgsql = Test::PostgreSQL->new;
+my $pgsql = Test::PostgreSQL->new
+    or plan skip_all => $Test::PostgreSQL::errstr;
 
 my $dbh = DBI->connect($pgsql->dsn);
 ok($dbh, "Connected to created database.");
