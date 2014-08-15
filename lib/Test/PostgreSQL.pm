@@ -427,18 +427,17 @@ L<DBD::Pg>.
 
 =head1 AUTHOR
 
-Kazuho Oku
+Toby Corkindale, Kazuho Oku, and various contributors.
 
 =head1 COPYRIGHT
 
-Version 0.10 copyright © 2012 Toby Corkindale.
+Current version copyright © 2012-2014 Toby Corkindale.
 
 Previous versions copyright (C) 2009 Cybozu Labs, Inc.
 
 =head1 LICENSE
 
-This program is free software; you can redistribute it and/or modify it under the same terms as Perl itself.
-
-See L<http://www.perl.com/perl/misc/Artistic.html>
+This module is free software, released under the Perl Artistic License 2.0.
+See L<http://www.perlfoundation.org/artistic_license_2_0> for more information.
 
 =cut
