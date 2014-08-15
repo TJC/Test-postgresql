@@ -12,4 +12,6 @@ test_requires 'Test::SharedFork' => 0.06;
 
 repository 'https://github.com/TJC/Test-postgresql';
 
+license 'artistic_2';
+
 WriteAll;
