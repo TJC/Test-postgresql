@@ -18,6 +18,5 @@ t/01-raii.t
 t/02-multi.t
 t/03-not-found.t
 t/04-multiprocess.t
-t/back-name-compat.t
 t/deadlock.t
 t/pod.t
