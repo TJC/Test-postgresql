@@ -29,6 +29,10 @@ our @SEARCH_PATHS = (
     "/usr/local",
 );
 
+if (defined $ENV{POSTGRES_HOME} and -d $ENV{POSTGRES_HOME}) {
+    unshift @SEARCH_PATHS, $ENV{POSTGRES_HOME};
+}
+
 our $errstr;
 our $BASE_PORT = 15432;
 
@@ -322,12 +326,17 @@ Test::PostgreSQL - PostgreSQL runner for tests
   use DBI;
   use Test::PostgreSQL;
   use Test::More;
-  
+
+  # optionally
+  # (if not already set at shell):
+  #
+  # $ENV{POSTGRES_HOME} = '/path/to/my/pgsql/installation';
+
   my $pgsql = Test::PostgreSQL->new()
       or plan skip_all => $Test::PostgreSQL::errstr;
-  
+
   plan tests => XXX;
-  
+
   my $dbh = DBI->connect($pgsql->dsn);
 
 =head1 DESCRIPTION
@@ -399,11 +408,24 @@ Stops postmaster.
 
 Setups the PostgreSQL instance.
 
+=head1 ENVIRONMENT
+
+=over 2
+
+=head2 POSTGRES_HOME
+
+If your postgres installation is not located in a well known path, or you have
+many versions installed and want to run your tests against particular one, set
+this environment variable to the desired path. For example:
+
+ export POSTGRES_HOME='/usr/local/pgsql94beta'
+
+This is the same idea and variable name which is used by the installer of
+L<DBD::Pg>.
+
+=back
+
 =head1 AUTHOR
-
-Toby Corkindale
-
-=head1 PREVIOUS AUTHOR
 
 Kazuho Oku
 
