@@ -410,8 +410,6 @@ Setups the PostgreSQL instance.
 
 =head1 ENVIRONMENT
 
-=over 2
-
 =head2 POSTGRES_HOME
 
 If your postgres installation is not located in a well known path, or you have
@@ -422,8 +420,6 @@ this environment variable to the desired path. For example:
 
 This is the same idea and variable name which is used by the installer of
 L<DBD::Pg>.
-
-=back
 
 =head1 AUTHOR
 
