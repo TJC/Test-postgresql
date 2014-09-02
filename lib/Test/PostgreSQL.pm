@@ -135,8 +135,28 @@ sub start {
         die "failed to launch PostgreSQL:$!\n$err";
     }->();
     { # create "test" database
-        my $dbh = DBI->connect($self->dsn(dbname => 'template1'), '', '', {})
-            or die $DBI::errstr;
+        my $tries = 5;
+        my $dbh;
+        while ($tries) {
+            $tries -= 1;
+            $dbh = DBI->connect($self->dsn(dbname => 'template1'), '', '', {
+                PrintError => 0,
+                RaiseError => 0
+            });
+            last if $dbh;
+
+            # waiting for database to start up
+            if ($DBI::errstr =~ /the database system is starting up/ 
+                || $DBI::errstr =~ /Connection refused/) {
+                sleep(1);
+                next;
+            }
+            die $DBI::errstr;
+        }
+
+        die "Connection to the database failed even after 5 tries"
+            unless ($dbh);
+
         if ($dbh->selectrow_arrayref(q{SELECT COUNT(*) FROM pg_database WHERE datname='test'})->[0] == 0) {
             $dbh->do('CREATE DATABASE test')
                 or die $dbh->errstr;
