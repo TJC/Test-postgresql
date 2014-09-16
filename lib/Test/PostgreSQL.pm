@@ -17,6 +17,7 @@ our $VERSION = '1.04';
 # in which case take the highest version. We append /bin/ and so forth to the path later.
 # Note that these are used only if the program isn't already in the path.
 our @SEARCH_PATHS = (
+    split(/:/, $ENV{PATH}),
     # popular installation dir?
     qw(/usr/local/pgsql),
     # ubuntu (maybe debian as well, find the newest version)
@@ -29,6 +30,8 @@ our @SEARCH_PATHS = (
     "/usr/local",
 );
 
+# This environment variable is used to override the default, so it gets
+# prefixed to the start of the search paths.
 if (defined $ENV{POSTGRES_HOME} and -d $ENV{POSTGRES_HOME}) {
     unshift @SEARCH_PATHS, $ENV{POSTGRES_HOME};
 }
@@ -309,25 +312,12 @@ sub setup {
 sub _find_program {
     my $prog = shift;
     undef $errstr;
-    my $path = _get_path_of($prog);
-    return $path
-        if $path;
     for my $sp (@SEARCH_PATHS) {
-        return "$sp/bin/$prog"
-            if -x "$sp/bin/$prog";
+        return "$sp/bin/$prog" if -x "$sp/bin/$prog";
+        return "$sp/$prog" if -x "$sp/$prog";
     }
-    $errstr = "could not find $prog, please set appropriate PATH";
+    $errstr = "could not find $prog, please set appropriate PATH or POSTGRES_HOME";
     return;
-}
-
-sub _get_path_of {
-    my $prog = shift;
-    my $path = `which $prog 2> /dev/null`;
-    chomp $path
-        if $path;
-    $path = ''
-        unless -x $path;
-    $path;
 }
 
 1;
