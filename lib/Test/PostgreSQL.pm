@@ -8,7 +8,6 @@ use Class::Accessor::Lite;
 use Cwd;
 use DBI;
 use File::Temp qw(tempdir);
-use Time::HiRes qw(nanosleep);
 use POSIX qw(SIGTERM SIGKILL WNOHANG setuid);
 
 our $VERSION = '1.05';
@@ -227,17 +226,17 @@ sub stop {
     $sig ||= SIGTERM;
 
     kill $sig, $self->pid;
-    my $timeout = 10 * 1000000000;
+    my $timeout = 10;
     while ($timeout > 0 and waitpid($self->pid, WNOHANG) <= 0) {
-        $timeout -= nanosleep(500000000);
+        $timeout -= sleep(1);
     }
 
     if ($timeout <= 0) {
         warn "Pg refused to die gracefully; killing it violently.\n";
         kill SIGKILL, $self->pid;
-        $timeout = 5 * 1000000000;
+        $timeout = 5;
         while ($timeout > 0 and waitpid($self->pid, WNOHANG) <= 0) {
-            $timeout -= nanosleep(500000000);
+            $timeout -= sleep(1);
         }
         if ($timeout <= 0) {
             warn "Pg really didn't die.. WTF?\n";
