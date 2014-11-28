@@ -42,11 +42,11 @@ our %Defaults = (
     auto_start      => 2,
     base_dir        => undef,
     initdb          => undef,
-    initdb_args     => '-U postgres -A trust',
+    initdb_args     => '-U postgres -A trust --nosync',
     pid             => undef,
     port            => undef,
     postmaster      => undef,
-    postmaster_args => '-h 127.0.0.1',
+    postmaster_args => '-h 127.0.0.1 -F',
     uid             => undef,
     _owner_pid      => undef,
 );
