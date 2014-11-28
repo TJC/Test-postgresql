@@ -46,7 +46,7 @@ our %Defaults = (
     pid             => undef,
     port            => undef,
     postmaster      => undef,
-    postmaster_args => '-h 127.0.0.1',
+    postmaster_args => '-h 127.0.0.1 -F',
     uid             => undef,
     _owner_pid      => undef,
 );
