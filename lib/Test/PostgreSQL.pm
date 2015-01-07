@@ -22,7 +22,7 @@ our @SEARCH_PATHS = (
     # ubuntu (maybe debian as well, find the newest version)
     (sort { $b cmp $a } grep { -d $_ } glob "/usr/lib/postgresql/*"),
     # macport
-    (sort { $b cmp $a } grep { -d $_ } glob "/opt/local/lib/postgresql-*"),
+    (sort { $b cmp $a } grep { -d $_ } glob "/opt/local/lib/postgresql*"),
     # Postgresapp.com
     (sort { $b cmp $a } grep { -d $_ } glob "/Applications/Postgres.app/Contents/Versions/*"),
     # BSDs end up with it in /usr/local/bin which doesn't appear to be in the path sometimes:
