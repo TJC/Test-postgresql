@@ -103,17 +103,26 @@ sub DESTROY {
 }
 
 sub dsn {
+    my $self = shift;
+    my %args = $self->_default_args(@_);
+
+    return 'DBI:Pg:' . join(';', map { "$_=$args{$_}" } sort keys %args);
+}
+
+sub _default_args {
     my ($self, %args) = @_;
     $args{host} ||= '127.0.0.1';
     $args{port} ||= $self->port;
     $args{user} ||= 'postgres';
     $args{dbname} ||= 'test';
-    return 'DBI:Pg:' . join(';', map { "$_=$args{$_}" } sort keys %args);
+    return %args;
 }
 
 sub uri {
-    my ($self, %args) = @_;
-    return sprintf('postgresql://postgres@127.0.0.1:%d/test', $self->port);
+    my $self = shift;
+    my %args = $self->_default_args(@_);
+
+    return sprintf('postgresql://%s@%s:%d/%s', @args{qw/user host port dbname/});
 }
 
 sub start {
@@ -395,6 +404,13 @@ Arguments passed to C<initdb> and C<postmaster>.  Following example adds
 
 Builds and returns dsn by using given parameters (if any).  Default username is
 'postgres', and dbname is 'test' (an empty database).
+
+=head2 uri
+
+Builds and returns a connection URI using the given parameters (if any). See
+L<URI::db> for details about the format.
+
+Default username is 'postgres', and dbname is 'test' (an empty database).
 
 =head2 pid
 
