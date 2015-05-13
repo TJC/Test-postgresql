@@ -10,7 +10,7 @@ use DBI;
 use File::Temp qw(tempdir);
 use POSIX qw(SIGTERM SIGKILL WNOHANG setuid);
 
-our $VERSION = '1.05';
+our $VERSION = '1.06';
 
 # Various paths that Postgres gets installed under, sometimes with a version on the end,
 # in which case take the highest version. We append /bin/ and so forth to the path later.
