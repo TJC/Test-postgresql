@@ -11,7 +11,7 @@ lib/Test/PostgreSQL.pm
 Makefile.PL
 MANIFEST			This list of files
 META.yml
-README
+README.md
 t/00-base.t
 t/01-raii.t
 t/02-multi.t
