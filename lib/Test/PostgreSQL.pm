@@ -86,9 +86,15 @@ sub new {
         $self->initdb($prog);
     }
     if (! defined $self->pg_ctl) {
-        my $prog = _find_program('pg_ctl')
-            or return;
-        $self->pg_ctl($prog);
+        my $prog = _find_program('pg_ctl');
+        if ( $prog ) {
+            # we only use pg_ctl if Pg version is >= 9
+            my $ret = qx/"$prog" --version/;
+            if ( $ret =~ /(\d+)\./ && $1 >= 9 ) {
+                $self->pg_ctl($prog);
+            }
+
+        }
     }
     if (! defined $self->postmaster) {
         my $prog = _find_program('postgres') || _find_program('postmaster')
@@ -200,11 +206,13 @@ sub _try_start {
         );
 
         system(@cmd);
+
         my $ret = open( my $pidfh, '<',
             File::Spec->catfile( $self->base_dir, 'data', 'postmaster.pid' ) );
 
         if ($ret) {
             my $pid = do { local $/; <$pidfh> };
+            chomp($pid);
             $self->pid($pid);
         }
         $self->port($port);
@@ -268,7 +276,7 @@ sub stop {
             File::Spec->catdir( $self->base_dir, 'data' ),
             '-m', 'fast'
         );
-        system(@cmd);
+        system(@cmd) == 0 or die "@cmd failed:$?";
     }
     else {
         # old style
@@ -326,7 +334,7 @@ sub setup {
                 '-o',
                 $self->initdb_args,
             );
-            system(@cmd);
+            system(@cmd) == 0 or die "@cmd failed:$?";
         }
         else {
             # old style
@@ -446,7 +454,19 @@ directory will not be removed at exit.
 
 Path to C<initdb> and C<postmaster> which are part of the PostgreSQL
 distribution.  If not set, the programs are automatically searched by looking
-up $PATH and other prefixed directories.
+up $PATH and other prefixed directories. Since C<postmaster> is deprecated in
+newer PostgreSQL versions C<postgres> is used in preference to C<postmaster>.
+
+=head2 pg_ctl
+
+Path to C<pg_ctl> which is part of the PostgreSQL distribution.
+
+Starting with PostgreSQL version 9.0 <pg_ctl> can be used to start/stop
+postgres without having to use fork/pipe and will be chosen automatically
+if L</pg_ctl> is not set but the program is found and the version is recent
+enough.
+
+B<NOTE:> do NOT use this with PostgreSQL versions prior to version 9.0.
 
 =head2 initdb_args
 
