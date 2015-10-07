@@ -5,9 +5,10 @@ use warnings;
 
 use 5.008;
 use Class::Accessor::Lite;
-use Cwd;
 use DBI;
-use File::Temp qw(tempdir);
+use File::Spec;
+use File::Temp;
+use File::Which;
 use POSIX qw(SIGTERM SIGKILL WNOHANG setuid);
 
 our $VERSION = '1.06';
@@ -16,7 +17,6 @@ our $VERSION = '1.06';
 # in which case take the highest version. We append /bin/ and so forth to the path later.
 # Note that these are used only if the program isn't already in the path.
 our @SEARCH_PATHS = (
-    split(/:/, $ENV{PATH}),
     # popular installation dir?
     qw(/usr/local/pgsql),
     # ubuntu (maybe debian as well, find the newest version)
@@ -43,6 +43,7 @@ our %Defaults = (
     base_dir        => undef,
     initdb          => undef,
     initdb_args     => '-U postgres -A trust',
+    pg_ctl          => undef,
     pid             => undef,
     port            => undef,
     postmaster      => undef,
@@ -60,19 +61,21 @@ sub new {
         @_ == 1 ? %{$_[0]} : @_,
         _owner_pid => $$,
     }, $klass;
-    if (! defined $self->uid && $ENV{USER} eq 'root') {
+    if (! defined $self->uid && $ENV{USER} && $ENV{USER} eq 'root') {
         my @a = getpwnam('nobody')
             or die "user nobody does not exist, use uid() to specify user:$!";
         $self->uid($a[2]);
     }
     if (defined $self->base_dir) {
-        $self->base_dir(cwd . '/' . $self->base_dir)
-            if $self->base_dir !~ m|^/|;
+        $self->base_dir( File::Spec->rel2abs( $self->base_dir ) );
     } else {
         $self->base_dir(
-            tempdir(
+            File::Temp::newdir(
+                'temp.XXXX',
                 CLEANUP => $ENV{TEST_POSTGRESQL_PRESERVE} ? undef : 1,
-            ),
+                EXLOCK  => 0,
+                TMPDIR  => 1
+            )
         );
         chown $self->uid, -1, $self->base_dir
             if defined $self->uid;
@@ -82,8 +85,19 @@ sub new {
             or return;
         $self->initdb($prog);
     }
+    if (! defined $self->pg_ctl) {
+        my $prog = _find_program('pg_ctl');
+        if ( $prog ) {
+            # we only use pg_ctl if Pg version is >= 9
+            my $ret = qx/"$prog" --version/;
+            if ( $ret =~ /(\d+)\./ && $1 >= 9 ) {
+                $self->pg_ctl($prog);
+            }
+
+        }
+    }
     if (! defined $self->postmaster) {
-        my $prog = _find_program('postmaster')
+        my $prog = _find_program('postgres') || _find_program('postmaster')
             or return;
         $self->postmaster($prog);
     }
@@ -177,81 +191,117 @@ sub start {
 
 sub _try_start {
     my ($self, $port) = @_;
-    # open log and fork
-    open my $logfh, '>>', $self->base_dir . '/postgres.log'
-        or die 'failed to create log file:' . $self->base_dir
-            . "/postgres.log:$!";
-    my $pid = fork;
-    die "fork(2) failed:$!"
-        unless defined $pid;
-    if ($pid == 0) {
-        open STDOUT, '>>&', $logfh
-            or die "dup(2) failed:$!";
-        open STDERR, '>>&', $logfh
-            or die "dup(2) failed:$!";
-        chdir $self->base_dir
-            or die "failed to chdir to:" . $self->base_dir . ":$!";
-        if (defined $self->uid) {
-            setuid($self->uid)
-                or die "setuid failed:$!";
-        }
-        my $cmd = join(
-            ' ',
-            $self->postmaster,
-            $self->postmaster_args,
-            '-p', $port,
-            '-D', $self->base_dir . '/data',
-            '-k', $self->base_dir . '/tmp',
+    my $logfile = File::Spec->catfile($self->base_dir, 'postgres.log');
+    if ( $self->pg_ctl ) {
+
+        my @cmd = (
+            $self->pg_ctl,
+            'start', '-w', '-s', '-D',
+            File::Spec->catdir( $self->base_dir, 'data' ),
+            '-l', $logfile, '-o',
+            join( ' ',
+                $self->postmaster_args, '-p',
+                $port,                  '-k',
+                File::Spec->catdir( $self->base_dir, 'tmp' ) )
         );
-        exec($cmd);
-        die "failed to launch postmaster:$?";
-    }
-    close $logfh;
-    # wait until server becomes ready (or dies)
-    for (my $i = 0; $i < 100; $i++) {
-        open $logfh, '<', $self->base_dir . '/postgres.log'
-            or die 'failed to open log file:' . $self->base_dir
-                . "/postgres.log:$!";
-        my $lines = do { join '', <$logfh> };
-        close $logfh;
-        last
-            if $lines =~ /is ready to accept connections/;
-        if (waitpid($pid, WNOHANG) > 0) {
-            # failed
-            return $lines;
+
+        system(@cmd);
+
+        my $ret = open( my $pidfh, '<',
+            File::Spec->catfile( $self->base_dir, 'data', 'postmaster.pid' ) );
+
+        if ($ret) {
+            my $pid = do { local $/; <$pidfh> };
+            chomp($pid);
+            $self->pid($pid);
         }
-        sleep 1;
+        $self->port($port);
     }
-    # PostgreSQL is ready
-    $self->pid($pid);
-    $self->port($port);
+    else {
+        # old style - open log and fork
+        open my $logfh, '>>', $logfile
+            or die "failed to create log file: $logfile: $!";
+        my $pid = fork;
+        die "fork(2) failed:$!"
+            unless defined $pid;
+        if ($pid == 0) {
+            open STDOUT, '>>&', $logfh
+                or die "dup(2) failed:$!";
+            open STDERR, '>>&', $logfh
+                or die "dup(2) failed:$!";
+            chdir $self->base_dir
+                or die "failed to chdir to:" . $self->base_dir . ":$!";
+            if (defined $self->uid) {
+                setuid($self->uid)
+                    or die "setuid failed:$!";
+            }
+            my $cmd = join(
+                ' ',
+                $self->postmaster,
+                $self->postmaster_args,
+                '-p', $port,
+                '-D', File::Spec->catdir($self->base_dir, 'data'),
+                '-k', File::Spec->catdir($self->base_dir, 'tmp'),
+            );
+            exec($cmd);
+            die "failed to launch postmaster:$?";
+        }
+        close $logfh;
+        # wait until server becomes ready (or dies)
+        for (my $i = 0; $i < 100; $i++) {
+            open $logfh, '<', $logfile
+            or die "failed to create log file: $logfile: $!";
+            my $lines = do { join '', <$logfh> };
+            close $logfh;
+            last
+                if $lines =~ /is ready to accept connections/;
+            if (waitpid($pid, WNOHANG) > 0) {
+                # failed
+                return $lines;
+            }
+            sleep 1;
+        }
+        # PostgreSQL is ready
+        $self->pid($pid);
+        $self->port($port);
+    }   
     return;
 }
 
 sub stop {
     my ($self, $sig) = @_;
-    return unless defined $self->pid;
-
-    $sig ||= SIGTERM;
-
-    kill $sig, $self->pid;
-    my $timeout = 10;
-    while ($timeout > 0 and waitpid($self->pid, WNOHANG) <= 0) {
-        $timeout -= sleep(1);
+    if ( $self->pg_ctl ) {
+        my @cmd = (
+            $self->pg_ctl, 'stop', '-s', '-D',
+            File::Spec->catdir( $self->base_dir, 'data' ),
+            '-m', 'fast'
+        );
+        system(@cmd) == 0 or die "@cmd failed:$?";
     }
+    else {
+        # old style
+        return unless defined $self->pid;
 
-    if ($timeout <= 0) {
-        warn "Pg refused to die gracefully; killing it violently.\n";
-        kill SIGKILL, $self->pid;
-        $timeout = 5;
+        $sig ||= SIGTERM;
+    
+        kill $sig, $self->pid;
+        my $timeout = 10;
         while ($timeout > 0 and waitpid($self->pid, WNOHANG) <= 0) {
             $timeout -= sleep(1);
         }
+
         if ($timeout <= 0) {
-            warn "Pg really didn't die.. WTF?\n";
+            warn "Pg refused to die gracefully; killing it violently.\n";
+            kill SIGKILL, $self->pid;
+            $timeout = 5;
+            while ($timeout > 0 and waitpid($self->pid, WNOHANG) <= 0) {
+                $timeout -= sleep(1);
+            }
+            if ($timeout <= 0) {
+                warn "Pg really didn't die.. WTF?\n";
+            }
         }
     }
-
     $self->pid(undef);
     return;
 }
@@ -262,64 +312,82 @@ sub setup {
     mkdir $self->base_dir;
     chmod 0755, $self->base_dir
         or die "failed to chmod 0755 dir:" . $self->base_dir . ":$!";
-    if ($ENV{USER} eq 'root') {
+    if ($ENV{USER} && $ENV{USER} eq 'root') {
         chown $self->uid, -1, $self->base_dir
             or die "failed to chown dir:" . $self->base_dir . ":$!";
     }
-    if (mkdir $self->base_dir . '/tmp') {
+    my $tmpdir = File::Spec->catfile($self->base_dir, 'tmp');
+    if (mkdir $tmpdir) {
         if ($self->uid) {
-            chown $self->uid, -1, $self->base_dir . '/tmp'
-                or die "failed to chown dir:" . $self->base_dir . "/tmp:$!";
+            chown $self->uid, -1, $tmpdir
+                or die "failed to chown dir:$tmpdir:$!";
         }
     }
     # initdb
-    if (! -d $self->base_dir . '/data') {
-        pipe my $rfh, my $wfh
-            or die "failed to create pipe:$!";
-        my $pid = fork;
-        die "fork failed:$!"
-            unless defined $pid;
-        if ($pid == 0) {
-            close $rfh;
-            open STDOUT, '>&', $wfh
-                or die "dup(2) failed:$!";
-            open STDERR, '>&', $wfh
-                or die "dup(2) failed:$!";
-            chdir $self->base_dir
-                or die "failed to chdir to:" . $self->base_dir . ":$!";
-            if (defined $self->uid) {
-                setuid($self->uid)
-                    or die "setuid failed:$!";
-            }
-            my $cmd = join(
-                ' ',
-                $self->initdb,
+    if (! -d File::Spec->catdir($self->base_dir, 'data')) {
+        if ( $self->pg_ctl ) {
+            my @cmd = (
+                $self->pg_ctl,
+                'init',
+                '-s',
+                '-D', File::Spec->catdir($self->base_dir, 'data'),
+                '-o',
                 $self->initdb_args,
-                '-D', $self->base_dir . '/data',
             );
-            exec($cmd);
-            die "failed to exec:$cmd:$!";
+            system(@cmd) == 0 or die "@cmd failed:$?";
         }
-        close $wfh;
-        my $output = '';
-        while (my $l = <$rfh>) {
-            $output .= $l;
-        }
-        close $rfh;
-        while (waitpid($pid, 0) <= 0) {
-        }
-        die "*** initdb failed ***\n$output\n"
-            if $? != 0;
+        else {
+            # old style
+            pipe my $rfh, my $wfh
+                or die "failed to create pipe:$!";
+            my $pid = fork;
+            die "fork failed:$!"
+                unless defined $pid;
+            if ($pid == 0) {
+                close $rfh;
+                open STDOUT, '>&', $wfh
+                    or die "dup(2) failed:$!";
+                open STDERR, '>&', $wfh
+                    or die "dup(2) failed:$!";
+                chdir $self->base_dir
+                    or die "failed to chdir to:" . $self->base_dir . ":$!";
+                if (defined $self->uid) {
+                    setuid($self->uid)
+                        or die "setuid failed:$!";
+                }
+                my $cmd = join(
+                    ' ',
+                    $self->initdb,
+                    $self->initdb_args,
+                    '-D', File::Spec->catdir($self->base_dir, 'data'),
+                );
+                exec($cmd);
+                die "failed to exec:$cmd:$!";
+            }
+            close $wfh;
+            my $output = '';
+            while (my $l = <$rfh>) {
+                $output .= $l;
+            }
+            close $rfh;
+            while (waitpid($pid, 0) <= 0) {
+            }
+            die "*** initdb failed ***\n$output\n"
+                if $? != 0;
 
+        }
         # use postgres hard-coded configuration as some packagers mess
         # around with postgresql.conf.sample too much:
-        truncate $self->base_dir . '/data/postgresql.conf', 0;
+        truncate File::Spec->catfile( $self->base_dir, 'data',
+            'postgresql.conf' ), 0;
     }
 }
 
 sub _find_program {
     my $prog = shift;
     undef $errstr;
+    my $path = which $prog;
+    return $path if $path;
     for my $sp (@SEARCH_PATHS) {
         return "$sp/bin/$prog" if -x "$sp/bin/$prog";
         return "$sp/$prog" if -x "$sp/$prog";
@@ -386,7 +454,19 @@ directory will not be removed at exit.
 
 Path to C<initdb> and C<postmaster> which are part of the PostgreSQL
 distribution.  If not set, the programs are automatically searched by looking
-up $PATH and other prefixed directories.
+up $PATH and other prefixed directories. Since C<postmaster> is deprecated in
+newer PostgreSQL versions C<postgres> is used in preference to C<postmaster>.
+
+=head2 pg_ctl
+
+Path to C<pg_ctl> which is part of the PostgreSQL distribution.
+
+Starting with PostgreSQL version 9.0 <pg_ctl> can be used to start/stop
+postgres without having to use fork/pipe and will be chosen automatically
+if L</pg_ctl> is not set but the program is found and the version is recent
+enough.
+
+B<NOTE:> do NOT use this with PostgreSQL versions prior to version 9.0.
 
 =head2 initdb_args
 
