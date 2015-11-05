@@ -110,6 +110,7 @@ sub new {
 }
 
 sub DESTROY {
+    local $?;
     my $self = shift;
     $self->stop
         if defined $self->pid && $$ == $self->_owner_pid;
