@@ -4,10 +4,14 @@ use inc::Module::Install;
 name 'Test-PostgreSQL';
 all_from 'lib/Test/PostgreSQL.pm';
 
-requires 'Class::Accessor::Lite';
 requires 'File::Spec';
 requires 'File::Which';
-test_requires 'DBI';
+requires 'DBI';
+requires 'Try::Tiny';
+requires 'Function::Parameters';
+requires 'Types::Standard';
+requires 'Moo';
+requires 'POSIX';
 test_requires 'DBD::Pg';
 test_requires 'Test::SharedFork' => 0.06;
 

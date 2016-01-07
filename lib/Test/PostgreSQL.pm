@@ -1,125 +1,178 @@
 package Test::PostgreSQL;
-
+use 5.12.0;
 use strict;
 use warnings;
-
-use 5.008;
-use Class::Accessor::Lite;
+use Moo;
+use Types::Standard -all;
+use Function::Parameters qw(:strict);
+use Try::Tiny;
 use DBI;
 use File::Spec;
 use File::Temp;
 use File::Which;
 use POSIX qw(SIGTERM SIGKILL WNOHANG setuid);
 
-our $VERSION = '1.06';
+our $VERSION = '1.20_01';
+our $errstr;
 
 # Various paths that Postgres gets installed under, sometimes with a version on the end,
 # in which case take the highest version. We append /bin/ and so forth to the path later.
-# Note that these are used only if the program isn't already in the path.
-our @SEARCH_PATHS = (
-    # popular installation dir?
-    qw(/usr/local/pgsql),
-    # ubuntu (maybe debian as well, find the newest version)
-    (sort { $b cmp $a } grep { -d $_ } glob "/usr/lib/postgresql/*"),
-    # macport
-    (sort { $b cmp $a } grep { -d $_ } glob "/opt/local/lib/postgresql*"),
-    # Postgresapp.com
-    (sort { $b cmp $a } grep { -d $_ } glob "/Applications/Postgres.app/Contents/Versions/*"),
-    # BSDs end up with it in /usr/local/bin which doesn't appear to be in the path sometimes:
-    "/usr/local",
+# *Note that these are used only if the program isn't already in the path!*
+has search_paths => (
+  is => "ro",
+  isa => ArrayRef,
+  builder => "_search_paths",
 );
 
-# This environment variable is used to override the default, so it gets
-# prefixed to the start of the search paths.
-if (defined $ENV{POSTGRES_HOME} and -d $ENV{POSTGRES_HOME}) {
-    unshift @SEARCH_PATHS, $ENV{POSTGRES_HOME};
+method _search_paths() {
+    my @base_paths = (
+        # popular installation dir?
+        qw(/usr/local/pgsql),
+        # ubuntu (maybe debian as well, find the newest version)
+        (sort { $b cmp $a } grep { -d $_ } glob "/usr/lib/postgresql/*"),
+        # macport
+        (sort { $b cmp $a } grep { -d $_ } glob "/opt/local/lib/postgresql*"),
+        # Postgresapp.com
+        (sort { $b cmp $a } grep { -d $_ } glob "/Applications/Postgres.app/Contents/Versions/*"),
+        # BSDs end up with it in /usr/local/bin which doesn't appear to be in the path sometimes:
+        "/usr/local",
+    );
+
+    # This environment variable is used to override the default, so it gets
+    # prefixed to the start of the search paths.
+    if (defined $ENV{POSTGRES_HOME}) {
+      return [$ENV{POSTGRES_HOME}, @base_paths];
+    }
+    return \@base_paths;
 }
 
-our $errstr;
-our $BASE_PORT = 15432;
-
-our %Defaults = (
-    auto_start      => 2,
-    base_dir        => undef,
-    initdb          => undef,
-    initdb_args     => '-U postgres -A trust',
-    pg_ctl          => undef,
-    pid             => undef,
-    port            => undef,
-    postmaster      => undef,
-    postmaster_args => '-h 127.0.0.1 -F',
-    uid             => undef,
-    _owner_pid      => undef,
+# We attempt to use this port first, and will increment from there.
+# The final port ends up in the ->port attribute.
+has base_port => (
+  is => "ro",
+  isa => Int,
+  default => sub { 15432 },
 );
 
-Class::Accessor::Lite->mk_accessors(keys %Defaults);
+has auto_start => (
+  is => "ro",
+  default => sub { 2 },
+);
 
-sub new {
-    my $klass = shift;
-    my $self = bless {
-        %Defaults,
-        @_ == 1 ? %{$_[0]} : @_,
-        _owner_pid => $$,
-    }, $klass;
+has base_dir => (
+  is => "rw",
+  default => sub {
+    File::Temp::newdir(
+        'temp.XXXX',
+        CLEANUP => $ENV{TEST_POSTGRESQL_PRESERVE} ? undef : 1,
+        EXLOCK  => 0,
+        TMPDIR  => 1
+    );
+  },
+);
+
+has initdb => (
+  is => "ro",
+  isa => Str,
+  lazy => 1,
+  default => method () { $self->_find_program('initdb') || die $errstr },
+);
+
+has initdb_args => (
+  is => "ro",
+  isa => Str,
+  default => sub { "-U postgres -A trust" },
+);
+
+has pg_ctl => (
+  is => "ro",
+  isa => Maybe[Str],
+  lazy => 1,
+  builder => "_pg_ctl_builder",
+);
+
+method _pg_ctl_builder() {
+  my $prog = $self->_find_program('pg_ctl');
+  if ( $prog ) {
+      # we only use pg_ctl if Pg version is >= 9
+      my $ret = qx/"$prog" --version/;
+      if ( $ret =~ /(\d+)\./ && $1 >= 9 ) {
+          return $prog;
+      }
+      warn "pg_ctl version earlier than 9";
+      return;
+  }
+  return;
+}
+
+has pid => (
+  is => "rw",
+  isa => Maybe[Int],
+);
+
+has port => (
+  is => "rw",
+  isa => Maybe[Int],
+);
+
+has uid => (
+  is => "rw",
+  isa => Maybe[Int],
+);
+
+has postmaster => (
+  is => "rw",
+  isa => Str,
+  lazy => 1,
+  default => method () {
+    $self->_find_program("postgres")
+    || $self->_find_program("postmaster")
+    || die $errstr
+  },
+);
+
+has postmaster_args => (
+  is => "rw",
+  isa => Str,
+  default => sub { "-h 127.0.0.1 -F" },
+);
+
+has _owner_pid => (
+  is => "ro",
+  isa => Int,
+  default => sub { $$ },
+);
+
+method BUILD($) {
     if (! defined $self->uid && $ENV{USER} && $ENV{USER} eq 'root') {
         my @a = getpwnam('nobody')
-            or die "user nobody does not exist, use uid() to specify user:$!";
+            or die "user nobody does not exist, use uid() to specify user: $!";
         $self->uid($a[2]);
     }
-    if (defined $self->base_dir) {
-        $self->base_dir( File::Spec->rel2abs( $self->base_dir ) );
-    } else {
-        $self->base_dir(
-            File::Temp::newdir(
-                'temp.XXXX',
-                CLEANUP => $ENV{TEST_POSTGRESQL_PRESERVE} ? undef : 1,
-                EXLOCK  => 0,
-                TMPDIR  => 1
-            )
-        );
-        chown $self->uid, -1, $self->base_dir
-            if defined $self->uid;
-    }
-    if (! defined $self->initdb) {
-        my $prog = _find_program('initdb')
-            or return;
-        $self->initdb($prog);
-    }
-    if (! defined $self->pg_ctl) {
-        my $prog = _find_program('pg_ctl');
-        if ( $prog ) {
-            # we only use pg_ctl if Pg version is >= 9
-            my $ret = qx/"$prog" --version/;
-            if ( $ret =~ /(\d+)\./ && $1 >= 9 ) {
-                $self->pg_ctl($prog);
-            }
 
-        }
-    }
-    if (! defined $self->postmaster) {
-        my $prog = _find_program('postgres') || _find_program('postmaster')
-            or return;
-        $self->postmaster($prog);
-    }
+    # Ensure base_dir is absolute; usually only the case if the user set it.
+    $self->base_dir( File::Spec->rel2abs( $self->base_dir ) );
+    # Ensure base dir is writable by our target uid, if we were running as root
+    chown $self->uid, -1, $self->base_dir
+        if defined $self->uid;
+
     if ($self->auto_start) {
         $self->setup
             if $self->auto_start >= 2;
         $self->start;
     }
-    $self;
 }
 
-sub DESTROY {
+method DEMOLISH($in_global_destruction) {
     local $?;
-    my $self = shift;
-    $self->stop
-        if defined $self->pid && $$ == $self->_owner_pid;
+    if (defined $self->pid && $self->_owner_pid == $$) {
+      $self->stop
+    }
     return;
 }
 
 sub dsn {
-    my $self = shift;
-    my %args = $self->_default_args(@_);
+    my %args = shift->_default_args(@_);
 
     return 'DBI:Pg:' . join(';', map { "$_=$args{$_}" } sort keys %args);
 }
@@ -140,61 +193,51 @@ sub uri {
     return sprintf('postgresql://%s@%s:%d/%s', @args{qw/user host port dbname/});
 }
 
-sub start {
-    my $self = shift;
-    return
-        if defined $self->pid;
-    # start (or die)
-    sub {
-        my $err;
-        if ($self->port) {
-            $err = $self->_try_start($self->port)
-                or return;
-        } else {
-            # try by incrementing port no
-            for (my $port = $BASE_PORT; $port < $BASE_PORT + 100; $port++) {
-                $err = $self->_try_start($port)
-                    or return;
-            }
-        }
-        # failed
-        die "failed to launch PostgreSQL:$!\n$err";
-    }->();
-    { # create "test" database
-        my $tries = 5;
-        my $dbh;
-        while ($tries) {
-            $tries -= 1;
-            $dbh = DBI->connect($self->dsn(dbname => 'template1'), '', '', {
-                PrintError => 0,
-                RaiseError => 0
-            });
-            last if $dbh;
-
-            # waiting for database to start up
-            if ($DBI::errstr =~ /the database system is starting up/ 
-                || $DBI::errstr =~ /Connection refused/) {
-                sleep(1);
-                next;
-            }
-            die $DBI::errstr;
-        }
-
-        die "Connection to the database failed even after 5 tries"
-            unless ($dbh);
-
-        if ($dbh->selectrow_arrayref(q{SELECT COUNT(*) FROM pg_database WHERE datname='test'})->[0] == 0) {
-            $dbh->do('CREATE DATABASE test')
-                or die $dbh->errstr;
-        }
+method start() {
+    if (defined $self->pid) {
+      warn "Apparently already started on " . $self->pid . "; not restarting.";
+      return;
     }
+
+    # If the user specified a port, try only that port:
+    if ($self->port) {
+        $self->_try_start($self->port);
+    }
+    else {
+        $self->_find_port_and_launch;
+    }
+
+    # create "test" database
+    $self->_create_test_database;
 }
 
-sub _try_start {
-    my ($self, $port) = @_;
-    my $logfile = File::Spec->catfile($self->base_dir, 'postgres.log');
-    if ( $self->pg_ctl ) {
+# This whole method was mostly cargo-culted from the earlier test-postgresql;
+# It could probably be made more sane.
+method _find_port_and_launch() {
+  my $tries = 10;
+  my $port = $self->base_port;
+  # try by incrementing port number
+  while (1) {
+    my $good = try {
+      $self->_try_start($port);
+      1;
+    }
+    catch {
+      # warn "Postgres failed to start on port $port\n";
+      unless ($tries--) {
+        die "Failed to start postgres on port $port: $_";
+      }
+      undef;
+    };
+    return if $good;
+    $port++;
+  }
+}
 
+method _try_start($port) {
+    my $logfile = File::Spec->catfile($self->base_dir, 'postgres.log');
+
+    if ( $self->pg_ctl ) {
         my @cmd = (
             $self->pg_ctl,
             'start', '-w', '-s', '-D',
@@ -208,14 +251,17 @@ sub _try_start {
 
         system(@cmd);
 
-        my $ret = open( my $pidfh, '<',
-            File::Spec->catfile( $self->base_dir, 'data', 'postmaster.pid' ) );
+        my $pid_path = File::Spec->catfile( $self->base_dir, 'data', 'postmaster.pid' );
 
-        if ($ret) {
-            my $pid = do { local $/; <$pidfh> };
-            chomp($pid);
-            $self->pid($pid);
-        }
+        open( my $pidfh, '<', $pid_path )
+          or die "Failed to open $pid_path: $!";
+
+        # Note that the file contains several lines; we only want the PID from the first.
+        my $pid = <$pidfh>;
+        chomp $pid;
+        $self->pid($pid);
+        close $pidfh;
+
         $self->port($port);
     }
     else {
@@ -258,19 +304,18 @@ sub _try_start {
                 if $lines =~ /is ready to accept connections/;
             if (waitpid($pid, WNOHANG) > 0) {
                 # failed
-                return $lines;
+                die "Failed to start Postgres: $lines\n";
             }
             sleep 1;
         }
         # PostgreSQL is ready
         $self->pid($pid);
         $self->port($port);
-    }   
+    }
     return;
 }
 
-sub stop {
-    my ($self, $sig) = @_;
+method stop($sig = SIGTERM) {
     if ( $self->pg_ctl ) {
         my @cmd = (
             $self->pg_ctl, 'stop', '-s', '-D',
@@ -283,8 +328,6 @@ sub stop {
         # old style
         return unless defined $self->pid;
 
-        $sig ||= SIGTERM;
-    
         kill $sig, $self->pid;
         my $timeout = 10;
         while ($timeout > 0 and waitpid($self->pid, WNOHANG) <= 0) {
@@ -307,8 +350,37 @@ sub stop {
     return;
 }
 
-sub setup {
-    my $self = shift;
+method _create_test_database() {
+  my $tries = 5;
+  my $dbh;
+  while ($tries) {
+      $tries -= 1;
+      $dbh = DBI->connect($self->dsn(dbname => 'template1'), '', '', {
+          PrintError => 0,
+          RaiseError => 0
+      });
+      last if $dbh;
+
+      # waiting for database to start up
+      if ($DBI::errstr =~ /the database system is starting up/
+          || $DBI::errstr =~ /Connection refused/) {
+          sleep(1);
+          next;
+      }
+      die $DBI::errstr;
+  }
+
+  die "Connection to the database failed even after 5 tries"
+      unless ($dbh);
+
+  if ($dbh->selectrow_arrayref(q{SELECT COUNT(*) FROM pg_database WHERE datname='test'})->[0] == 0) {
+      $dbh->do('CREATE DATABASE test')
+          or die $dbh->errstr;
+  }
+  return;
+}
+
+method setup() {
     # (re)create directory structure
     mkdir $self->base_dir;
     chmod 0755, $self->base_dir
@@ -384,12 +456,11 @@ sub setup {
     }
 }
 
-sub _find_program {
-    my $prog = shift;
+method _find_program($prog) {
     undef $errstr;
     my $path = which $prog;
     return $path if $path;
-    for my $sp (@SEARCH_PATHS) {
+    for my $sp (@{$self->search_paths}) {
         return "$sp/bin/$prog" if -x "$sp/bin/$prog";
         return "$sp/$prog" if -x "$sp/$prog";
     }
@@ -529,11 +600,11 @@ L<DBD::Pg>.
 
 =head1 AUTHOR
 
-Toby Corkindale, Kazuho Oku, and various contributors.
+Toby Corkindale, Kazuho Oku, Peter Mottram, plus various contributors.
 
 =head1 COPYRIGHT
 
-Current version copyright © 2012-2014 Toby Corkindale.
+Current version copyright © 2012-2015 Toby Corkindale.
 
 Previous versions copyright (C) 2009 Cybozu Labs, Inc.
 
