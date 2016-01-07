@@ -69,6 +69,11 @@ has base_dir => (
         TMPDIR  => 1
     );
   },
+  coerce => fun ($newval) {
+    # Ensure base_dir is absolute; usually only the case if the user set it.
+    # Avoid munging objects such as File::Temp
+    ref $newval ? $newval : File::Spec->rel2abs($newval);
+  },
 );
 
 has initdb => (
@@ -150,8 +155,6 @@ method BUILD($) {
         $self->uid($a[2]);
     }
 
-    # Ensure base_dir is absolute; usually only the case if the user set it.
-    $self->base_dir( File::Spec->rel2abs( $self->base_dir ) );
     # Ensure base dir is writable by our target uid, if we were running as root
     chown $self->uid, -1, $self->base_dir
         if defined $self->uid;
