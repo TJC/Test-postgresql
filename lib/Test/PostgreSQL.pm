@@ -12,7 +12,7 @@ use File::Temp;
 use File::Which;
 use POSIX qw(SIGTERM SIGKILL WNOHANG setuid);
 
-our $VERSION = '1.20_01';
+our $VERSION = '1.20_02';
 our $errstr;
 
 # Various paths that Postgres gets installed under, sometimes with a version on the end,
