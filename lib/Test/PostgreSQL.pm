@@ -62,8 +62,8 @@ has auto_start => (
 has base_dir => (
   is => "rw",
   default => sub {
-    File::Temp::newdir(
-        'temp.XXXX',
+    File::Temp->newdir(
+        'pgtest.XXXXX',
         CLEANUP => $ENV{TEST_POSTGRESQL_PRESERVE} ? undef : 1,
         EXLOCK  => 0,
         TMPDIR  => 1
