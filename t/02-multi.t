@@ -4,9 +4,9 @@ use warnings;
 use DBI;
 use Test::More;
 use Test::PostgreSQL;
+use Try::Tiny;
 
-Test::PostgreSQL->new()
-    or plan skip_all => $Test::PostgreSQL::errstr;
+try { Test::PostgreSQL->new } catch { plan skip_all => $_ };
 
 plan tests => 3;
 

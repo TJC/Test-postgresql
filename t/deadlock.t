@@ -4,9 +4,10 @@ use warnings;
 use DBI;
 use Test::PostgreSQL;
 use Test::More;
+use Try::Tiny;
 
-my $pgsql = Test::PostgreSQL->new
-    or plan skip_all => $Test::PostgreSQL::errstr;
+my $pgsql = try { Test::PostgreSQL->new }
+            catch { plan skip_all => $_ };
 
 my $dbh = DBI->connect($pgsql->dsn);
 ok($dbh, "Connected to created database.");

@@ -5,12 +5,12 @@ use DBI;
 use Test::More;
 use Test::PostgreSQL;
 use File::Temp qw(tempdir);
+use Try::Tiny;
 
 my $base_dir = tempdir(CLEANUP => 1);
 
-my $pgsql = Test::PostgreSQL->new(
-	base_dir => $base_dir
-) or plan skip_all => $Test::PostgreSQL::errstr;
+my $pgsql = try { Test::PostgreSQL->new( base_dir => $base_dir ) }
+            catch { plan skip_all => $_ };
 
 my $pid = $pgsql->pid;
 my $dsn = $pgsql->dsn;
