@@ -7,6 +7,7 @@ all_from 'lib/Test/PostgreSQL.pm';
 requires 'File::Spec';
 requires 'File::Which';
 requires 'DBI';
+requires 'DBD::Pg';
 requires 'Try::Tiny';
 requires 'Function::Parameters';
 requires 'Types::Standard';
