@@ -149,6 +149,9 @@ has _owner_pid => (
 );
 
 method BUILD($) {
+    # Ensure we have one or the other ways of starting Postgres:
+    try { $self->pg_ctl or $self->postmaster } catch { die $_ };
+
     if (! defined $self->uid && $ENV{USER} && $ENV{USER} eq 'root') {
         my @a = getpwnam('nobody')
             or die "user nobody does not exist, use uid() to specify user: $!";
