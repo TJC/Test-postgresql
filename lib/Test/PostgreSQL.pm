@@ -10,7 +10,7 @@ use DBI;
 use File::Spec;
 use File::Temp;
 use File::Which;
-use POSIX qw(SIGTERM SIGKILL WNOHANG setuid);
+use POSIX qw(SIGQUIT SIGKILL WNOHANG setuid);
 
 our $VERSION = '1.20_03';
 our $errstr;
@@ -321,8 +321,8 @@ method _try_start($port) {
     return;
 }
 
-method stop($sig = SIGTERM) {
-    if ( $self->pg_ctl ) {
+method stop($sig = SIGQUIT) {
+    if ( $self->pg_ctl && defined $self->base_dir ) {
         my @cmd = (
             $self->pg_ctl, 'stop', '-s', '-D',
             File::Spec->catdir( $self->base_dir, 'data' ),
@@ -331,7 +331,7 @@ method stop($sig = SIGTERM) {
         system(@cmd) == 0 or die "@cmd failed:$?";
     }
     else {
-        # old style
+        # old style or $self->base_dir File::Temp obj already DESTROYed
         return unless defined $self->pid;
 
         kill $sig, $self->pid;
