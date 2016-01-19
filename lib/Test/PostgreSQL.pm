@@ -12,7 +12,7 @@ use File::Temp;
 use File::Which;
 use POSIX qw(SIGQUIT SIGKILL WNOHANG setuid);
 
-our $VERSION = '1.20_03';
+our $VERSION = '1.20_05';
 our $errstr;
 
 # Deprecate use of %Defaults as we want to remove this package global

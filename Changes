@@ -2,6 +2,9 @@ Revision history for Perl extension Test::PostgreSQL.
 
 1.20
     - Major refactor, including converting to Moo and improving error handling and reporting.
+    - changes to help when stop is called during DESTROY RT#111181
+    - Fix RT#110972 by not rel2abs-ing File::Temp objects
+    - add backwards-compatibility code for deprecated global %Defaults
 
 1.10
     - localise $? in DESTROY closes rt#107957
