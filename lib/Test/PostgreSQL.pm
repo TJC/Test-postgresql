@@ -15,6 +15,23 @@ use POSIX qw(SIGQUIT SIGKILL WNOHANG setuid);
 our $VERSION = '1.20_03';
 our $errstr;
 
+# Deprecate use of %Defaults as we want to remove this package global
+use Tie::Hash::Method;
+tie our %Defaults, 'Tie::Hash::Method', FETCH => sub {
+    my $msg = "\nWARNING: using \$Test::PostgreSQL::Defaults is DEPRECATED.";
+    if ( $_[1] =~ /^(initdb|postmaster)_args$/ ) {
+        $msg .= " Use Test::PostgreSQL->new( extra_$_[1] => ... ) instead.";
+    }
+    warn $msg;
+    return $_[0]->base_hash->{ $_[1] };
+  };
+
+%Defaults = (
+    auto_start      => 2,
+    initdb_args     => '-U postgres -A trust',
+    postmaster_args => '-h 127.0.0.1 -F',
+);
+
 # Various paths that Postgres gets installed under, sometimes with a version on the end,
 # in which case take the highest version. We append /bin/ and so forth to the path later.
 # *Note that these are used only if the program isn't already in the path!*
@@ -51,12 +68,12 @@ method _search_paths() {
 has base_port => (
   is => "ro",
   isa => Int,
-  default => sub { 15432 },
+  default => 15432,
 );
 
 has auto_start => (
   is => "ro",
-  default => sub { 2 },
+  default => 2,
 );
 
 has base_dir => (
@@ -84,9 +101,18 @@ has initdb => (
 );
 
 has initdb_args => (
-  is => "ro",
+  is => "lazy",
   isa => Str,
-  default => sub { "-U postgres -A trust" },
+);
+
+method _build_initdb_args {
+    return "-U postgres -A trust " . $self->extra_initdb_args;
+}
+
+has extra_initdb_args => (
+  is      => "ro",
+  isa     => Str,
+  default => "",
 );
 
 has pg_ctl => (
@@ -137,9 +163,18 @@ has postmaster => (
 );
 
 has postmaster_args => (
-  is => "rw",
+  is => "lazy",
   isa => Str,
-  default => sub { "-h 127.0.0.1 -F" },
+);
+
+method _build_postmaster_args {
+    return "-h 127.0.0.1 -F " . $self->extra_postmaster_args;
+}
+
+has extra_postmaster_args => (
+    is      => "ro",
+    isa     => Str,
+    default => "",
 );
 
 has _owner_pid => (
@@ -548,15 +583,19 @@ B<NOTE:> do NOT use this with PostgreSQL versions prior to version 9.0.
 
 =head2 initdb_args
 
+Defaults to C<-U postgres -A trust>
+
+=head2 extra_initdb_args
+
+Extra args to be appended to L</initdb_args>
+
 =head2 postmaster_args
 
-Arguments passed to C<initdb> and C<postmaster>.  Following example adds
---encoding=utf8 option to C<initdb_args>.
+Defaults to C<-h 127.0.0.1 -F>
 
-  my $pgsql = Test::PostgreSQL->new(
-      initdb_args
-          => $Test::PostgreSQL::Defaults{initdb_args} . ' --encoding=utf8'
-  ) or plan skip_all => $Test::PostgreSQL::errstr;
+=head2 extra_postmaster_args
+
+Extra args to be appended to L</postmaster_args>
 
 =head2 dsn
 
