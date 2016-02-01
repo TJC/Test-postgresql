@@ -13,6 +13,7 @@ requires 'Function::Parameters';
 requires 'Types::Standard';
 requires 'Moo';
 requires 'POSIX';
+requires 'Tie::Hash::Method';
 test_requires 'DBD::Pg';
 test_requires 'Test::SharedFork' => 0.06;
 
