@@ -1,5 +1,5 @@
 package Test::PostgreSQL;
-use 5.12.0;
+use 5.14.0;
 use strict;
 use warnings;
 use Moo;
@@ -12,7 +12,7 @@ use File::Temp;
 use File::Which;
 use POSIX qw(SIGQUIT SIGKILL WNOHANG setuid);
 
-our $VERSION = '1.20_05';
+our $VERSION = '1.20';
 our $errstr;
 
 # Deprecate use of %Defaults as we want to remove this package global
