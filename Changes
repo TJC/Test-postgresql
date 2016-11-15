@@ -1,5 +1,8 @@
 Revision history for Perl extension Test::PostgreSQL.
 
+1.21
+    - If run as root in a Docker container, attempts to setuid before calling pg_ctl
+
 1.20
     - Major refactor, including converting to Moo and improving error handling and reporting.
     - changes to help when stop is called during DESTROY RT#111181

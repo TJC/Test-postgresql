@@ -10,9 +10,10 @@ use DBI;
 use File::Spec;
 use File::Temp;
 use File::Which;
-use POSIX qw(SIGQUIT SIGKILL WNOHANG setuid);
+use POSIX qw(SIGQUIT SIGKILL WNOHANG getuid setuid);
+use User::pwent;
 
-our $VERSION = '1.20';
+our $VERSION = '1.21_01';
 our $errstr;
 
 # Deprecate use of %Defaults as we want to remove this package global
@@ -151,6 +152,13 @@ has uid => (
   isa => Maybe[Int],
 );
 
+# Are we running as root? (Typical when run inside Docker containers)
+has is_root => (
+  is => "ro",
+  isa => Bool,
+  default => sub { getuid == 0 }
+);
+
 has postmaster => (
   is => "rw",
   isa => Str,
@@ -187,10 +195,19 @@ method BUILD($) {
     # Ensure we have one or the other ways of starting Postgres:
     try { $self->pg_ctl or $self->postmaster } catch { die $_ };
 
-    if (! defined $self->uid && $ENV{USER} && $ENV{USER} eq 'root') {
-        my @a = getpwnam('nobody')
-            or die "user nobody does not exist, use uid() to specify user: $!";
-        $self->uid($a[2]);
+    if (defined $self->uid and $self->uid == 0) {
+        die "uid() must be set to a non-root user id.";
+    }
+
+    if (not defined($self->uid) and $self->is_root) {
+        my $ent = getpwnam("nobody");
+        unless (defined $ent) {
+            die "user nobody does not exist, use uid() to specify a non-root user.";
+        }
+        unless ($ent->uid > 0) {
+            die "user nobody has uid 0; confused and exiting. use uid() to specify a non-root user.";
+        }
+        $self->uid($ent->uid);
     }
 
     # Ensure base dir is writable by our target uid, if we were running as root
@@ -289,8 +306,7 @@ method _try_start($port) {
                 $port,                  '-k',
                 File::Spec->catdir( $self->base_dir, 'tmp' ) )
         );
-
-        system(@cmd);
+        $self->setuid_cmd(@cmd);
 
         my $pid_path = File::Spec->catfile( $self->base_dir, 'data', 'postmaster.pid' );
 
@@ -320,8 +336,7 @@ method _try_start($port) {
             chdir $self->base_dir
                 or die "failed to chdir to:" . $self->base_dir . ":$!";
             if (defined $self->uid) {
-                setuid($self->uid)
-                    or die "setuid failed:$!";
+                setuid($self->uid) or die "setuid failed: $!";
             }
             my $cmd = join(
                 ' ',
@@ -363,7 +378,7 @@ method stop($sig = SIGQUIT) {
             File::Spec->catdir( $self->base_dir, 'data' ),
             '-m', 'fast'
         );
-        system(@cmd) == 0 or die "@cmd failed:$?";
+        $self->setuid_cmd(@cmd);
     }
     else {
         # old style or $self->base_dir File::Temp obj already DESTROYed
@@ -448,7 +463,7 @@ method setup() {
                 '-o',
                 $self->initdb_args,
             );
-            system(@cmd) == 0 or die "@cmd failed:$?";
+            $self->setuid_cmd(@cmd);
         }
         else {
             # old style
@@ -507,6 +522,20 @@ method _find_program($prog) {
     }
     $errstr = "could not find $prog, please set appropriate PATH or POSTGRES_HOME";
     return;
+}
+
+method setuid_cmd(@cmd) {
+  my $pid = fork;
+  if ($pid == 0) {
+    chdir $self->base_dir;
+    if (defined $self->uid) {
+      setuid($self->uid) or die "setuid failed: $!";
+    }
+    exec(@cmd) or die "Failed to exec pg_ctl: $!";
+  }
+  else {
+    waitpid($pid, 0);
+  }
 }
 
 1;
