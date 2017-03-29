@@ -1,6 +1,9 @@
 Revision history for Perl extension Test::PostgreSQL.
 
 1.21
+    - Add parentheses to all method keywords to deal with change in upstream F::P
+
+1.21
     - If run as root in a Docker container, attempts to setuid before calling pg_ctl
 
 1.20
