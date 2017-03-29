@@ -106,7 +106,7 @@ has initdb_args => (
   isa => Str,
 );
 
-method _build_initdb_args {
+method _build_initdb_args() {
     return "-U postgres -A trust " . $self->extra_initdb_args;
 }
 
@@ -175,7 +175,7 @@ has postmaster_args => (
   isa => Str,
 );
 
-method _build_postmaster_args {
+method _build_postmaster_args() {
     return "-h 127.0.0.1 -F " . $self->extra_postmaster_args;
 }
 
