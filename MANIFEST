@@ -11,6 +11,7 @@ inc/Module/Install/WriteAll.pm
 lib/Test/PostgreSQL.pm
 Makefile.PL
 META.yml
+META.json
 README.md
 t/00-base.t
 t/01-raii.t
