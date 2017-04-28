@@ -1,6 +1,8 @@
 Revision history for Perl extension Test::PostgreSQL.
 
-1.21
+1.23
+    - Fix missing META files RT:121425
+1.22
     - Add parentheses to all method keywords to deal with change in upstream F::P
 
 1.21
