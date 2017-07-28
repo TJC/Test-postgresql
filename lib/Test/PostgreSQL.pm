@@ -137,6 +137,29 @@ method _pg_ctl_builder() {
   return;
 }
 
+has psql => (
+    is => 'ro',
+    isa => Str,
+    lazy => 1,
+    default => method () { $self->_find_program('psql') || die $errstr },
+);
+
+has psql_args => (
+    is => 'lazy',
+    isa => Str,
+);
+
+method _build_psql_args() {
+    return '-U postgres -d test -h 127.0.0.1 -p ' . $self->port
+         . $self->extra_psql_args;
+}
+
+has extra_psql_args => (
+    is => 'ro',
+    isa => Str,
+    default => '',
+);
+
 has pid => (
   is => "rw",
   isa => Maybe[Int],
@@ -625,6 +648,29 @@ Defaults to C<-h 127.0.0.1 -F>
 =head2 extra_postmaster_args
 
 Extra args to be appended to L</postmaster_args>
+
+=head2 psql
+
+Path to C<psql> client which is part of the PostgreSQL distribution.
+
+C<psql> can be used to run SQL scripts against the temporary database created
+by L</new>:
+
+    my $pgsql = Test::PostgreSQL->new();
+    my $psql = $pgsql->psql;
+    
+    my $out = `$psql -f /path/to/script.sql 2>&1`;
+    
+    die "Error executing script.sql: $out" unless $? == 0;
+
+=head2 psql_args
+
+Command line arguments necessary for C<psql> to connect to the correct PostgreSQL
+instance. Defaults to C<-U postgres -d test -h 127.0.0.1 -p $self->port>
+
+=head2 extra_psql_args
+
+Extra args to be appended to L</psql_args>.
 
 =head2 dsn
 
