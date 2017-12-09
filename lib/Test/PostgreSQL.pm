@@ -128,7 +128,7 @@ method _pg_ctl_builder() {
   if ( $prog ) {
       # we only use pg_ctl if Pg version is >= 9
       my $ret = qx/"$prog" --version/;
-      if ( $ret =~ /(\d+)\./ && $1 >= 9 ) {
+      if ( $ret =~ /(\d+)(?:\.|devel)/ && $1 >= 9 ) {
           return $prog;
       }
       warn "pg_ctl version earlier than 9";
