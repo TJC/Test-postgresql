@@ -94,6 +94,13 @@ has base_dir => (
   },
 );
 
+has socket_dir =>
+    (is => "ro",
+     isa => Str,
+     lazy => 1,
+     default => method () {File::Spec->catdir( $self->base_dir, 'tmp' )},
+    );
+
 has initdb => (
   is => "ro",
   isa => Str,
@@ -115,6 +122,13 @@ has extra_initdb_args => (
   isa     => Str,
   default => "",
 );
+
+has use_socket =>
+    (
+     is  => "ro",
+     isa     => Bool,
+     default => 0,
+    );
 
 has pg_ctl => (
   is => "ro",
@@ -150,8 +164,10 @@ has psql_args => (
 );
 
 method _build_psql_args() {
-    return '-U postgres -d test -h 127.0.0.1 -p ' . $self->port
-         . $self->extra_psql_args;
+    return '-U postgres -d test -h '.
+        ($self->use_socket?$self->socket_dir:'127.0.0.1').
+        ' -p ' . $self->port
+        . $self->extra_psql_args;
 }
 
 has extra_psql_args => (
@@ -199,7 +215,9 @@ has postmaster_args => (
 );
 
 method _build_postmaster_args() {
-    return "-h 127.0.0.1 -F " . $self->extra_postmaster_args;
+    return "-h ".
+        ($self->use_socket?"''":"127.0.0.1").
+        " -F " . $self->extra_postmaster_args;
 }
 
 has extra_postmaster_args => (
@@ -260,7 +278,14 @@ sub dsn {
 
 sub _default_args {
     my ($self, %args) = @_;
-    $args{host} ||= '127.0.0.1';
+    # If we're doing socket-only (IE, not listening on localhost),
+    # then provide the path to the socket
+    if ($self->{use_socket}) {
+        $args{host} //= $self->socket_dir;
+    } else {
+        $args{host} ||= '127.0.0.1';
+    }
+
     $args{port} ||= $self->port;
     $args{user} ||= 'postgres';
     $args{dbname} ||= 'test';
@@ -327,7 +352,7 @@ method _try_start($port) {
             join( ' ',
                 $self->postmaster_args, '-p',
                 $port,                  '-k',
-                File::Spec->catdir( $self->base_dir, 'tmp' ) )
+                $self->socket_dir)
         );
         $self->setuid_cmd(@cmd);
 
@@ -367,7 +392,7 @@ method _try_start($port) {
                 $self->postmaster_args,
                 '-p', $port,
                 '-D', File::Spec->catdir($self->base_dir, 'data'),
-                '-k', File::Spec->catdir($self->base_dir, 'tmp'),
+                '-k', $self->socket_dir,
             );
             exec($cmd);
             die "failed to launch postmaster:$?";
@@ -468,7 +493,7 @@ method setup() {
         chown $self->uid, -1, $self->base_dir
             or die "failed to chown dir:" . $self->base_dir . ":$!";
     }
-    my $tmpdir = File::Spec->catfile($self->base_dir, 'tmp');
+    my $tmpdir = $self->socket_dir;
     if (mkdir $tmpdir) {
         if ($self->uid) {
             chown $self->uid, -1, $tmpdir
