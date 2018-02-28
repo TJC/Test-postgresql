@@ -94,12 +94,12 @@ has base_dir => (
   },
 );
 
-has socket_dir =>
-    (is => "ro",
-     isa => Str,
-     lazy => 1,
-     default => method () {File::Spec->catdir( $self->base_dir, 'tmp' )},
-    );
+has socket_dir => (
+  is => "ro",
+  isa => Str,
+  lazy => 1,
+  default => method () { File::Spec->catdir( $self->base_dir, 'tmp' ) },
+);
 
 has initdb => (
   is => "ro",
@@ -123,12 +123,11 @@ has extra_initdb_args => (
   default => "",
 );
 
-has use_socket =>
-    (
-     is  => "ro",
-     isa     => Bool,
-     default => 0,
-    );
+has use_socket => (
+  is  => "ro",
+  isa     => Bool,
+  default => 0,
+);
 
 has pg_ctl => (
   is => "ro",
@@ -165,7 +164,7 @@ has psql_args => (
 
 method _build_psql_args() {
     return '-U postgres -d test -h '.
-        ($self->use_socket?$self->socket_dir:'127.0.0.1').
+        ($self->use_socket ? $self->socket_dir : '127.0.0.1') .
         ' -p ' . $self->port
         . $self->extra_psql_args;
 }
@@ -216,7 +215,7 @@ has postmaster_args => (
 
 method _build_postmaster_args() {
     return "-h ".
-        ($self->use_socket?"''":"127.0.0.1").
+        ($self->use_socket ? "''" : "127.0.0.1") .
         " -F " . $self->extra_postmaster_args;
 }
 
