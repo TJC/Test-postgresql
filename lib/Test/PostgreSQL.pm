@@ -731,9 +731,9 @@ Setups the PostgreSQL instance.
 
 =head2 use_socket
 
-Whether to only connect via sockets; if false (the default),
+Whether to only connect via UNIX sockets; if false (the default),
 connections can occur via localhost. [This changes the L</dsn>
-returned to only give the socket directory, and avoids any issues with
+returned to only give the UNIX socket directory, and avoids any issues with
 conflicting TCP ports on localhost.]
 
 =head1 ENVIRONMENT
