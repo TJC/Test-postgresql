@@ -123,7 +123,7 @@ has extra_initdb_args => (
   default => "",
 );
 
-has use_socket => (
+has unix_socket => (
   is  => "ro",
   isa     => Bool,
   default => 0,
@@ -164,7 +164,7 @@ has psql_args => (
 
 method _build_psql_args() {
     return '-U postgres -d test -h '.
-        ($self->use_socket ? $self->socket_dir : '127.0.0.1') .
+        ($self->unix_socket ? $self->socket_dir : '127.0.0.1') .
         ' -p ' . $self->port
         . $self->extra_psql_args;
 }
@@ -215,7 +215,7 @@ has postmaster_args => (
 
 method _build_postmaster_args() {
     return "-h ".
-        ($self->use_socket ? "''" : "127.0.0.1") .
+        ($self->unix_socket ? "''" : "127.0.0.1") .
         " -F " . $self->extra_postmaster_args;
 }
 
@@ -279,7 +279,7 @@ sub _default_args {
     my ($self, %args) = @_;
     # If we're doing socket-only (IE, not listening on localhost),
     # then provide the path to the socket
-    if ($self->{use_socket}) {
+    if ($self->{unix_socket}) {
         $args{host} //= $self->socket_dir;
     } else {
         $args{host} ||= '127.0.0.1';
@@ -729,7 +729,7 @@ Stops postmaster.
 
 Setups the PostgreSQL instance.
 
-=head2 use_socket
+=head2 unix_socket
 
 Whether to only connect via UNIX sockets; if false (the default),
 connections can occur via localhost. [This changes the L</dsn>
