@@ -40,13 +40,7 @@ Module Dependencies
 Some additional CPAN modules are required; however they will be pulled
 down automatically by `cpanm` at install/test time.
 
- * Class::Accessor::Lite
- * DBI
- * DBD::Pg
-
-This module's unit tests require:
-
- * Test::SharedFork
+See Makefile.PL for details.
 
 Authors
 -------
