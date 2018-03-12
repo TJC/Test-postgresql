@@ -433,7 +433,7 @@ method stop($sig = SIGQUIT) {
 
         kill $sig, $self->pid;
         my $timeout = 10;
-        while ($timeout > 0 and waitpid($self->pid, WNOHANG) <= 0) {
+        while ($timeout > 0 and waitpid($self->pid, WNOHANG) == 0) {
             $timeout -= sleep(1);
         }
 
@@ -441,7 +441,7 @@ method stop($sig = SIGQUIT) {
             warn "Pg refused to die gracefully; killing it violently.\n";
             kill SIGKILL, $self->pid;
             $timeout = 5;
-            while ($timeout > 0 and waitpid($self->pid, WNOHANG) <= 0) {
+            while ($timeout > 0 and waitpid($self->pid, WNOHANG) == 0) {
                 $timeout -= sleep(1);
             }
             if ($timeout <= 0) {
