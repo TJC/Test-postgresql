@@ -371,7 +371,7 @@ method _try_start($port) {
                 $port,                  '-k',
                 $self->socket_dir)
         );
-        $self->setuid_cmd(@cmd);
+        $self->setuid_cmd(\@cmd, 1);
 
         my $pid_path = File::Spec->catfile( $self->base_dir, 'data', 'postmaster.pid' );
 
@@ -443,7 +443,7 @@ method stop($sig = SIGQUIT) {
             File::Spec->catdir( $self->base_dir, 'data' ),
             '-m', 'fast'
         );
-        $self->setuid_cmd(@cmd);
+        $self->setuid_cmd(\@cmd);
     }
     else {
         # old style or $self->base_dir File::Temp obj already DESTROYed
@@ -528,7 +528,7 @@ method setup() {
                 '-o',
                 $self->initdb_args,
             );
-            $self->setuid_cmd(@cmd);
+            $self->setuid_cmd(\@cmd);
         }
         else {
             # old style
@@ -589,14 +589,15 @@ method _find_program($prog) {
     return;
 }
 
-method setuid_cmd(@cmd) {
+method setuid_cmd($cmd, $suppress_errors = !1) {
   my $pid = fork;
   if ($pid == 0) {
     chdir $self->base_dir;
     if (defined $self->uid) {
       setuid($self->uid) or die "setuid failed: $!";
     }
-    exec(@cmd) or die "Failed to exec pg_ctl: $!";
+    close STDERR if $suppress_errors;
+    exec(@$cmd) or die "Failed to exec pg_ctl: $!";
   }
   else {
     waitpid($pid, 0);
