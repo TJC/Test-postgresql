@@ -168,6 +168,11 @@ method _pg_ctl_builder() {
   return;
 }
 
+has pg_config => (
+    is => 'ro',
+    isa => Str,
+);
+
 has psql => (
     is => 'ro',
     isa => Str,
@@ -570,10 +575,20 @@ method setup() {
                 if $? != 0;
 
         }
-        # use postgres hard-coded configuration as some packagers mess
-        # around with postgresql.conf.sample too much:
-        truncate File::Spec->catfile( $self->base_dir, 'data',
-            'postgresql.conf' ), 0;
+        
+        my $conf_file
+            = File::Spec->catfile($self->base_dir, 'data', 'postgresql.conf');
+        
+        if (my $pg_config = $self->pg_config) {
+            open my $fh, '>', $conf_file or die "Can't open $conf_file: $!";
+            print $fh $pg_config;
+            close $fh;
+        }
+        else {
+            # use postgres hard-coded configuration as some packagers mess
+            # around with postgresql.conf.sample too much:
+            truncate $conf_file, 0;
+        }
     }
 }
 
@@ -710,6 +725,24 @@ Defaults to C<-U $db_owner -A trust>. See L</db_owner>.
 =head2 extra_initdb_args
 
 Extra args to be appended to L</initdb_args>. Default is empty.
+
+=head2 pg_config
+
+Configuration to place in C<$basedir/data/postgresql.conf>. Use this to override
+PostgreSQL configuration defaults, e.g. to speed up PostgreSQL database init
+and seeding one might use something like this:
+
+    my $pgsql = Test::PostgreSQL->new(
+        pg_config => <<'EOC',
+    fsync = off
+    synchronous_commit = off
+    full_page_writes = off
+    bgwriter_lru_maxpages = 0
+    shared_buffers = 512MB
+    effective_cache_size = 512MB
+    work_mem = 100MB
+    EOC
+    );
 
 =head2 postmaster
 
