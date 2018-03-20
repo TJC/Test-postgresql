@@ -753,6 +753,27 @@ See also L</db_owner>, L</dbname>, L</host>, L</base_port>.
 
 Extra args to be appended to L</psql_args>.
 
+=head2 auto_start
+
+Integer value that controls whether PostgreSQL server is started and setup
+after creating C<Test::PostgreSQL> instance. Possible values:
+
+=over 4
+
+=item 0
+
+Do not start PostgreSQL.
+
+=item 1
+
+Start PostgreSQL but do not run L</setup>.
+
+=item 2
+
+Start PostgreSQL and run L</setup>.
+
+Default is C<2>.
+
 =head1 METHODS
 
 =head2 new
