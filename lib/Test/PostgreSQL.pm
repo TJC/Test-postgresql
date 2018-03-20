@@ -198,6 +198,19 @@ has extra_psql_args => (
     default => '',
 );
 
+has run_psql_args => (
+    is => 'ro',
+    isa => Str,
+    # Single transaction, skip .psqlrc, be quiet, echo errors, stop on first error
+    default => '-1Xqb -v ON_ERROR_STOP=1',
+);
+
+has seed_scripts => (
+    is => 'ro',
+    isa => ArrayRef[Str],
+    default => sub { [] },
+);
+
 has pid => (
   is => "rw",
   isa => Maybe[Int],
@@ -503,7 +516,13 @@ method _create_test_database($dbname) {
       $dbh->do("CREATE DATABASE $dbname")
           or die $dbh->errstr;
   }
-  return;
+
+    my $seed_scripts = $self->seed_scripts || [];
+    
+    $self->run_psql_scripts(@$seed_scripts)
+        if @$seed_scripts;
+    
+    return;
 }
 
 method setup() {
@@ -619,6 +638,37 @@ method setuid_cmd($cmd, $suppress_errors = !1) {
   }
 }
 
+method run_psql(@psql_args) {
+    my $cmd = join ' ', (
+        $self->psql,
+        
+        # Default connection settings
+        $self->psql_args,
+        
+        # Extra connection settings or something else
+        $self->extra_psql_args,
+        
+        # run_psql specific arguments
+        $self->run_psql_args,
+        
+        @psql_args,
+    );
+    
+    # Usually anything less than WARNING is not really helpful
+    # in batch mode. Does it make sense to make this configurable?
+    local $ENV{PGOPTIONS} = '--client-min-messages=warning';
+    
+    my $psql_out = qx{$cmd 2>&1};
+    
+    die "Error executing psql: $psql_out" unless $? == 0;
+}
+
+method run_psql_scripts(@script_paths) {
+    my $psql_args = join ' ', map {; "-f $_" } @script_paths;
+    
+    $self->run_psql($psql_args);
+}
+
 1;
 __END__
 
@@ -641,8 +691,8 @@ Test::PostgreSQL - PostgreSQL runner for tests
   #
   # $ENV{POSTGRES_HOME} = '/path/to/my/pgsql/installation';
 
-  my $pgsql = Test::PostgreSQL->new()
-      or plan skip_all => $Test::PostgreSQL::errstr;
+  my $pgsql = eval { Test::PostgreSQL->new() }
+      or plan skip_all => $@;
 
   plan tests => XXX;
 
@@ -658,7 +708,8 @@ several years ago.
 
 =head1 ATTRIBUTES
 
-C<Test::PostgreSQL> object has the following attributes:
+C<Test::PostgreSQL> object has the following attributes, overridable by passing
+corresponding argument to constructor:
 
 =head2 dbname
 
@@ -701,7 +752,7 @@ Unix socket directory to use if L</unix_socket> is true. Default is C<$basedir/t
 
 Path to C<pg_ctl> program which is part of the PostgreSQL distribution.
 
-Starting with PostgreSQL version 9.0 <pg_ctl> can be used to start/stop
+Starting with PostgreSQL version 9.0 C<pg_ctl> can be used to start/stop
 postgres without having to use fork/pipe and will be chosen automatically
 if L</pg_ctl> is not set but the program is found and the version is recent
 enough.
@@ -720,7 +771,7 @@ to try and find it in PostgreSQL directory.
 Arguments to pass to C<initdb> program when creating a new PostgreSQL database
 cluster for Test::PostgreSQL session.
 
-Defaults to C<-U $db_owner -A trust>. See L</db_owner>.
+Defaults to C<-U postgres -A trust>. See L</db_owner>.
 
 =head2 extra_initdb_args
 
@@ -733,16 +784,16 @@ PostgreSQL configuration defaults, e.g. to speed up PostgreSQL database init
 and seeding one might use something like this:
 
     my $pgsql = Test::PostgreSQL->new(
-        pg_config => <<'EOC',
-    fsync = off
-    synchronous_commit = off
-    full_page_writes = off
-    bgwriter_lru_maxpages = 0
-    shared_buffers = 512MB
-    effective_cache_size = 512MB
-    work_mem = 100MB
-    EOC
-    );
+        pg_config => q|
+        # foo baroo mymse throbbozongo
+        fsync = off
+        synchronous_commit = off
+        full_page_writes = off
+        bgwriter_lru_maxpages = 0
+        shared_buffers = 512MB
+        effective_cache_size = 512MB
+        work_mem = 100MB
+    |);
 
 =head2 postmaster
 
@@ -778,13 +829,49 @@ by L</new>:
 Command line arguments necessary for C<psql> to connect to the correct PostgreSQL
 instance.
 
-Defaults to C<-U postgres -d test -h 127.0.0.1 -p $self->port>.
+Defaults to C<-U postgres -d test -h 127.0.0.1 -p $self-E<gt>port>.
 
 See also L</db_owner>, L</dbname>, L</host>, L</base_port>.
 
 =head2 extra_psql_args
 
 Extra args to be appended to L</psql_args>.
+
+=head2 run_psql_args
+
+Arguments specific for L</run_psql> invocation, used mostly to set up and seed
+database schema after PostgreSQL instance is launched and configured.
+
+Default is C<-1Xqb -v ON_ERROR_STOP=1>. This means:
+
+=over 4
+
+=item *
+
+1: Run all SQL statements in passed scripts as single transaction
+
+=item *
+
+X: Skip C<.psqlrc> files
+
+=item *
+
+q: Run quietly, print only notices and errors on stderr (if any)
+
+=item *
+
+b: Echo SQL statements that cause PostgreSQL exceptions
+
+=item *
+
+-v ON_ERROR_STOP=1: Stop processing SQL statements after the first error
+
+=back
+
+=head2 seed_scripts
+
+Arrayref with the list of SQL scripts to run after the database was instanced
+and set up. Default is C<[]>.
 
 =head2 auto_start
 
@@ -793,19 +880,21 @@ after creating C<Test::PostgreSQL> instance. Possible values:
 
 =over 4
 
-=item 0
+=item C<0>
 
 Do not start PostgreSQL.
 
-=item 1
+=item C<1>
 
 Start PostgreSQL but do not run L</setup>.
 
-=item 2
+=item C<2>
 
 Start PostgreSQL and run L</setup>.
 
 Default is C<2>.
+
+=back
 
 =head1 METHODS
 
@@ -847,7 +936,30 @@ Stops postmaster.
 
 =head2 setup
 
-Setups the PostgreSQL instance.
+Setups the PostgreSQL instance. Note that this method should be invoked I<before>
+L</start>.
+
+=head2 run_psql
+
+Execute C<psql> program with the given list of arguments. Usually this would be
+something like:
+
+    $pgsql->run_psql('-c', q|'INSERT INTO foo (bar) VALUES (42)'|);
+
+Or:
+
+    $pgsql->run_psql('-f', '/path/to/script.sql');
+
+Note that when using literal SQL statements with C<-c> parameter you will need
+to escape them manually like shown above. C<run_psql> will not quote them for you.
+
+The actual command line to execute C<psql> will be concatenated from L</psql_args>,
+L</extra_psql_args>, and L</run_psql_args>.
+
+=head2 run_psql_scripts
+
+Given a list of script file paths, invoke L</run_psql> once with C<-f 'script'>
+for every path.
 
 =head1 ENVIRONMENT
 
@@ -864,7 +976,7 @@ L<DBD::Pg>.
 
 =head1 AUTHOR
 
-Toby Corkindale, Kazuho Oku, Peter Mottram, plus various contributors.
+Toby Corkindale, Kazuho Oku, Peter Mottram, Alex Tokarev, plus various contributors.
 
 =head1 COPYRIGHT
 

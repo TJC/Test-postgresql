@@ -1,16 +1,22 @@
-use Test::More tests => 7;
+use Test::More;
 
 use strict;
 use warnings;
 
 use DBI;
 use Test::PostgreSQL;
+use Try::Tiny;
 
-my $pgsql = Test::PostgreSQL->new(
-    dbname => 'foo',
-    dbowner => 'foobaroo',
-    host => 'localhost',
-);
+my $pgsql = try {
+    Test::PostgreSQL->new(
+        dbname => 'foo',
+        dbowner => 'foobaroo',
+        host => 'localhost',
+    )
+}
+catch { plan skip_all => $_ };
+
+plan tests => 7;
 
 ok defined $pgsql, "test instance with non-default configs";
 
@@ -47,7 +53,6 @@ undef $pgsql;
 my $watchdog = 50;
 
 while ( kill 0, $pid and $watchdog-- ) {
-    note "waiting, $watchdog";
     select undef, undef, undef, 0.1;
 }
 
