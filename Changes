@@ -1,5 +1,10 @@
 Revision history for Perl extension Test::PostgreSQL.
 
+1.30.0_01
+    - Switch to semantic versioning (https://semver.org)
+    - pg_version attribute holds PostgreSQL version detected at startup
+    - Improved test diagnostics
+
 1.26
     - Fix postgresql.conf test on PostgreSQL prior to 9.2
 

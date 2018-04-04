@@ -4,6 +4,7 @@ use inc::Module::Install;
 name 'Test-PostgreSQL';
 all_from 'lib/Test/PostgreSQL.pm';
 
+perl_version '5.01400';
 requires 'File::Spec';
 requires 'File::Which';
 requires 'DBI';

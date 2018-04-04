@@ -13,7 +13,7 @@ use File::Which;
 use POSIX qw(SIGQUIT SIGKILL WNOHANG getuid setuid);
 use User::pwent;
 
-our $VERSION = '1.26';
+our $VERSION = '1.30.0_01';
 our $errstr;
 
 # Deprecate use of %Defaults as we want to remove this package global
@@ -147,6 +147,25 @@ has unix_socket => (
   default => 0,
 );
 
+has pg_version => (
+    is => 'ro',
+    isa => Str,
+    lazy => 1,
+    predicate => 1,
+    builder => "_pg_version_builder",
+);
+
+method _pg_version_builder() {
+    my $ver_cmd = join ' ', (
+        $self->postmaster,
+        '--version'
+    );
+    
+    my ($ver) = qx{$ver_cmd} =~ /(\d+(?:\.\d+)?)/;
+    
+    return $ver;
+}
+
 has pg_ctl => (
   is => "ro",
   isa => Maybe[Str],
@@ -201,9 +220,23 @@ has extra_psql_args => (
 has run_psql_args => (
     is => 'ro',
     isa => Str,
-    # Single transaction, skip .psqlrc, be quiet, echo errors, stop on first error
-    default => '-1Xqb -v ON_ERROR_STOP=1',
+    lazy => 1,
+    builder => "_build_run_psql_args",
 );
+
+method _build_run_psql_args() {
+    my @args = (
+        '-1', # Single transaction
+        '-X', # Ignore .psqlrc
+        '-q', # Quiet
+        '-v ON_ERROR_STOP=1', # Stop on first error
+    );
+    
+    # Echo errors, available in psql 9.5+
+    push @args, '-b' if $self->pg_version >= 9.5;
+    
+    return join ' ', @args;
+}
 
 has seed_scripts => (
     is => 'ro',

@@ -18,18 +18,14 @@ ok defined($pg), "test instance 1 created";
 my $datadir = File::Spec->catfile($pg->base_dir, 'data');
 my $conf_file = File::Spec->catfile($datadir, 'postgresql.conf');
 
-my $ver_cmd = join' ', (
-    $pg->postmaster,
-    '--version'
-);
-
-my ($ver) = qx{$ver_cmd} =~ /(\d+(?:\.\d+)?)/;
-
 # By default postgresql.conf is truncated
 is -s $conf_file, 0, "test 1 postgresql.conf size 0";
 
+my $ver = $pg->pg_version;
+
 SKIP: {
     skip "No -C switch on PostgreSQL $ver (9.2 required)", 1 if $ver < 9.2;
+    
     my $cmd = join ' ', (
         $pg->postmaster,
         '-D', $datadir,
