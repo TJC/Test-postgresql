@@ -13,7 +13,7 @@ use File::Which;
 use POSIX qw(SIGQUIT SIGKILL WNOHANG getuid setuid);
 use User::pwent;
 
-our $VERSION = '1.30.0_01';
+our $VERSION = '1.27_02';
 our $errstr;
 
 # Deprecate use of %Defaults as we want to remove this package global
@@ -697,9 +697,19 @@ method run_psql(@psql_args) {
 }
 
 method run_psql_scripts(@script_paths) {
-    my $psql_args = join ' ', map {; "-f $_" } @script_paths;
+    my @psql_commands;
     
-    $self->run_psql($psql_args);
+    # psql 9.6+ supports multiple -c and -f commands invoked at once,
+    # older psql does not. Executing psql multiple times breaks single
+    # transaction semantics but is unlikely to cause problems in real world.
+    if ( $self->pg_version > 9.6 ) {
+        push @psql_commands, join ' ', map {; "-f $_" } @script_paths;
+    }
+    else {
+        @psql_commands = map {; "-f $_" } @script_paths;
+    }
+    
+    $self->run_psql($_) for @psql_commands;
 }
 
 1;
@@ -893,7 +903,7 @@ q: Run quietly, print only notices and errors on stderr (if any)
 
 =item *
 
-b: Echo SQL statements that cause PostgreSQL exceptions
+b: Echo SQL statements that cause PostgreSQL exceptions (version 9.5+)
 
 =item *
 
@@ -905,6 +915,11 @@ b: Echo SQL statements that cause PostgreSQL exceptions
 
 Arrayref with the list of SQL scripts to run after the database was instanced
 and set up. Default is C<[]>.
+
+B<NOTE> that C<psql> older than 9.6 does not support multiple C<-c> and C<-f>
+switches in arguments so C<seed_scripts> will be executed one by one. This
+implies multiple transactions instead of just one; if you need all seed statements
+to apply within a single transaction, combine them into one seed scripts.
 
 =head2 auto_start
 
@@ -989,10 +1004,14 @@ to escape them manually like shown above. C<run_psql> will not quote them for yo
 The actual command line to execute C<psql> will be concatenated from L</psql_args>,
 L</extra_psql_args>, and L</run_psql_args>.
 
+B<NOTE> that C<psql> older than 9.6 does not support multiple C<-c> and/or C<-f>
+switches in arguments.
+
 =head2 run_psql_scripts
 
 Given a list of script file paths, invoke L</run_psql> once with C<-f 'script'>
-for every path.
+for every path in PostgreSQL 9.6+, or once per C<-f 'script'> for older PostgreSQL
+versions.
 
 =head1 ENVIRONMENT
 
