@@ -14,5 +14,5 @@
 ._*
 .DS_Store
 .*.swp
-MANIFEST.bak
-
+/Test-PostgreSQL-*
+/.build/
