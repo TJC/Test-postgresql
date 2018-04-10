@@ -1,5 +1,7 @@
 # Test::PostgreSQL
 
+[![CircleCI](https://circleci.com/gh/TJC/Test-postgresql/tree/master.svg?style=svg)](https://circleci.com/gh/TJC/Test-postgresql/tree/master)
+
 Test::PostgreSQL helps you run unit tests that require a PostgreSQL database,
 by starting one up for you, and automatically cleaning it up at the end of
 the test.
