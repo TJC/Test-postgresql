@@ -1,3 +1,4 @@
+use 5.01400;
 use strict;
 use inc::Module::Install;
 
