@@ -1,5 +1,7 @@
 Revision history for Perl extension Test::PostgreSQL.
 
+{{$NEXT}}
+
 1.26
     - Fix postgresql.conf test on PostgreSQL prior to 9.2
 
