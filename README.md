@@ -1,4 +1,4 @@
-[![Build Status](https://circleci.com/gh/TJC/Test-postgresql.svg)](https://circleci.com/gh/TJC/Test-postgresql)
+[![Build Status](https://circleci.com/gh/nohuhu/Test-postgresql.svg)](https://circleci.com/gh/nohuhu/Test-postgresql)
 # NAME
 
 Test::PostgreSQL - PostgreSQL runner for tests
@@ -170,13 +170,18 @@ Default is `-1Xqb -v ON_ERROR_STOP=1`. This means:
 - 1: Run all SQL statements in passed scripts as single transaction
 - X: Skip `.psqlrc` files
 - q: Run quietly, print only notices and errors on stderr (if any)
-- b: Echo SQL statements that cause PostgreSQL exceptions
+- b: Echo SQL statements that cause PostgreSQL exceptions (version 9.5+)
 - -v ON\_ERROR\_STOP=1: Stop processing SQL statements after the first error
 
 ## seed\_scripts
 
 Arrayref with the list of SQL scripts to run after the database was instanced
 and set up. Default is `[]`.
+
+**NOTE** that `psql` older than 9.6 does not support multiple `-c` and `-f`
+switches in arguments so `seed_scripts` will be executed one by one. This
+implies multiple transactions instead of just one; if you need all seed statements
+to apply within a single transaction, combine them into one seed script.
 
 ## auto\_start
 
@@ -257,10 +262,14 @@ to escape them manually like shown above. `run_psql` will not quote them for you
 The actual command line to execute `psql` will be concatenated from ["psql\_args"](#psql_args),
 ["extra\_psql\_args"](#extra_psql_args), and ["run\_psql\_args"](#run_psql_args).
 
+**NOTE** that `psql` older than 9.6 does not support multiple `-c` and/or `-f`
+switches in arguments.
+
 ## run\_psql\_scripts
 
 Given a list of script file paths, invoke ["run\_psql"](#run_psql) once with `-f 'script'`
-for every path.
+for every path in PostgreSQL 9.6+, or once per `-f 'script'` for older PostgreSQL
+versions.
 
 # ENVIRONMENT
 
