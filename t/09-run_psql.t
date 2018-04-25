@@ -14,10 +14,14 @@ plan tests => 3;
 
 ok defined($pg), "new instance created";
 
+my @stmts = (
+    q|CREATE TABLE foo (bar int)|,
+    q|INSERT INTO foo (bar) VALUES (42)|,
+);
 eval {
     $pg->run_psql(
-        '-c', q|'CREATE TABLE foo (bar int)'|,
-        '-c', q|'INSERT INTO foo (bar) VALUES (42)'|,
+        '-c',
+        q|'| . join( '; ', @stmts ) . q|'|,
     )
 };
 

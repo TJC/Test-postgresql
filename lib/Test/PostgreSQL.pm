@@ -202,7 +202,7 @@ has run_psql_args => (
     is => 'ro',
     isa => Str,
     # Single transaction, skip .psqlrc, be quiet, echo errors, stop on first error
-    default => '-1Xqb -v ON_ERROR_STOP=1',
+    default => '-1Xq -v ON_ERROR_STOP=1',
 );
 
 has seed_scripts => (
@@ -613,12 +613,12 @@ method setup() {
 
 method _find_program($prog) {
     undef $errstr;
-    my $path = which $prog;
-    return $path if $path;
     for my $sp (@{$self->search_paths}) {
         return "$sp/bin/$prog" if -x "$sp/bin/$prog";
         return "$sp/$prog" if -x "$sp/$prog";
     }
+    my $path = which $prog;
+    return $path if $path;
     $errstr = "could not find $prog, please set appropriate PATH or POSTGRES_HOME";
     return;
 }
