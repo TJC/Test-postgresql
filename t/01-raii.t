@@ -22,6 +22,7 @@ my $have_version = $pgsql->pg_version;
 
 is $have_version, $want_version, "pg_version";
 
+# diag() here is deliberate, to show Postgres version in smoker reports
 diag "PostgreSQL version: $want_version";
 
 my $dsn = $pgsql->dsn;
