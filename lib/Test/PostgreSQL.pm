@@ -919,7 +919,7 @@ and set up. Default is C<[]>.
 B<NOTE> that C<psql> older than 9.6 does not support multiple C<-c> and C<-f>
 switches in arguments so C<seed_scripts> will be executed one by one. This
 implies multiple transactions instead of just one; if you need all seed statements
-to apply within a single transaction, combine them into one seed scripts.
+to apply within a single transaction, combine them into one seed script.
 
 =head2 auto_start
 
