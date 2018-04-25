@@ -1,4 +1,4 @@
-[![Build Status](https://circleci.com/gh/nohuhu/Test-postgresql.svg)](https://circleci.com/gh/nohuhu/Test-postgresql)
+[![Build Status](https://circleci.com/gh/TJC/Test-postgresql.svg)](https://circleci.com/gh/TJC/Test-postgresql)
 # NAME
 
 Test::PostgreSQL - PostgreSQL runner for tests
