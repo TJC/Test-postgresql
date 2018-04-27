@@ -646,12 +646,12 @@ method setup() {
 
 method _find_program($prog) {
     undef $errstr;
-    my $path = which $prog;
-    return $path if $path;
     for my $sp (@{$self->search_paths}) {
         return "$sp/bin/$prog" if -x "$sp/bin/$prog";
         return "$sp/$prog" if -x "$sp/$prog";
     }
+    my $path = which $prog;
+    return $path if $path;
     $errstr = "could not find $prog, please set appropriate PATH or POSTGRES_HOME";
     return;
 }
