@@ -1,6 +1,8 @@
 Revision history for Perl extension Test::PostgreSQL.
 
 {{$NEXT}}
+
+1.27 2018-10-17T02:06:08Z
     - Use pg_version attribute to better handle -b and -f psql switches
       depending on installed PostgreSQL version
     - Updated docs to reflect the changes

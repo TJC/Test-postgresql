@@ -4,13 +4,13 @@
       "Toby Corkindale, Kazuho Oku, Peter Mottram, Alex Tokarev, plus various contributors."
    ],
    "dynamic_config" : 0,
-   "generated_by" : "Minilla/v3.0.16, CPAN::Meta::Converter version 2.150010",
+   "generated_by" : "Minilla/v3.1.2, CPAN::Meta::Converter version 2.150010",
    "license" : [
       "artistic_2"
    ],
    "meta-spec" : {
       "url" : "http://search.cpan.org/perldoc?CPAN::Meta::Spec",
-      "version" : 2
+      "version" : "2"
    },
    "name" : "Test-PostgreSQL",
    "no_index" : {
@@ -73,8 +73,9 @@
          "web" : "https://github.com/TJC/Test-postgresql"
       }
    },
-   "version" : "1.26",
+   "version" : "1.27",
    "x_contributors" : [
+      "Alex Tokarev <nohuhu@users.noreply.github.com>",
       "Alex Tokarev <tokarev@cpan.org>",
       "Dagfinn Ilmari Mannsåker <ilmari@ilmari.org>",
       "Dan Book <grinnz@grinnz.com>",
@@ -91,5 +92,6 @@
       "Toby Corkindale <tjc@wintrmute.net>",
       "root <root@altar.int.qindel.com>"
    ],
-   "x_serialization_backend" : "JSON::PP version 2.97001"
+   "x_serialization_backend" : "JSON::PP version 2.27400_02",
+   "x_static_install" : 1
 }
