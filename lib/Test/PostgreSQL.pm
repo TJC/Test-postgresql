@@ -814,7 +814,7 @@ to try and find it in PostgreSQL directory.
 Arguments to pass to C<initdb> program when creating a new PostgreSQL database
 cluster for Test::PostgreSQL session.
 
-Defaults to C<-U postgres -A trust>. See L</db_owner>.
+Defaults to C<-U postgres -A trust>. See L</dbowner>.
 
 =head2 extra_initdb_args
 
@@ -874,7 +874,7 @@ instance.
 
 Defaults to C<-U postgres -d test -h 127.0.0.1 -p $self-E<gt>port>.
 
-See also L</db_owner>, L</dbname>, L</host>, L</base_port>.
+See also L</dbowner>, L</dbname>, L</host>, L</base_port>.
 
 =head2 extra_psql_args
 
