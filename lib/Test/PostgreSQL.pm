@@ -390,7 +390,7 @@ method start() {
 method _find_port_and_launch() {
   my $tries = 10;
   my $port = $self->base_port;
-  # try by incrementing port number
+  # try by incrementing port number until PostgreSQL starts
   while (1) {
     my $good = try {
       $self->_try_start($port);
@@ -399,12 +399,14 @@ method _find_port_and_launch() {
     catch {
       # warn "Postgres failed to start on port $port\n";
       unless ($tries--) {
-        die "Failed to start postgres on port $port: $_";
+        die "Failed to start postgres after trying 10 potential ports: $_";
       }
       undef;
     };
     return if $good;
-    $port++;
+    # Increment port by a random number to avoid clashes with other Test::Postgresql processes
+    # Keep in mind that this increment is going to be made up to 10 times, so avoid exceeding 64k
+    $port += int(rand(500)) + 1;
   }
 }
 
