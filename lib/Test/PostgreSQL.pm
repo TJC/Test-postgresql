@@ -390,6 +390,7 @@ method start() {
 method _find_port_and_launch() {
   my $tries = 10;
   my $port = $self->base_port;
+  srand(); # Re-seed the RNG in case the caller forked the process
   # try by incrementing port number until PostgreSQL starts
   while (1) {
     my $good = try {
