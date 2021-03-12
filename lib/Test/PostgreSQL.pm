@@ -13,7 +13,7 @@ use File::Which;
 use POSIX qw(SIGQUIT SIGKILL WNOHANG getuid setuid);
 use User::pwent;
 
-our $VERSION = '1.27';
+our $VERSION = '1.28';
 our $errstr;
 
 # Deprecate use of %Defaults as we want to remove this package global
